@@ -357,6 +357,16 @@ def impl(context, env_var):
     del context.orig_env[env_var]
 
 
+@given('move netstat and ss if found')
+def impl(context):
+    command = "mv /bin/netstat /bin/netstat.bkp; mv /bin/ss /bin/ss.bkp"
+    run_async_command(context, command)
+
+@then('reset netstat and ss')
+def impl(context):
+    command = "mv /bin/netstat.bkp /bin/netstat; mv /bin/ss.bkp /bin/ss"
+    run_async_command(context, command)
+
 @given('the user runs "{command}"')
 @when('the user runs "{command}"')
 @then('the user runs "{command}"')

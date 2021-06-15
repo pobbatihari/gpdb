@@ -516,3 +516,10 @@ Feature: gpstate tests
          When the user runs "gpstate -x"
          Then gpstate output looks like
              | Cluster Expansion State = No Expansion Detected |
+
+    Scenario: gpstate -e logs no error when there are no netstat and ss present on the system
+        Given a standard local demo cluster is running
+        And move netstat and ss if found
+        And the user runs "gpstate -e"
+        Then gpstate should print "None of the utility netstat and ss are available in the system. Please install and rerun the command" to stdout
+        Then reset netstat and ss

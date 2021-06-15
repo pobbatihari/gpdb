@@ -3,7 +3,31 @@
 # Displays system status information
 #
 
+try:
+    import pickle
 
+    from gppylib.db import dbconn
+    from gppylib.gpparseopts import OptParser, OptChecker
+    from gppylib.gparray import *
+    from gppylib.gplog import get_default_logger, log_to_file_only
+    from gppylib import gphostcache
+    from gppylib import userinput
+    from gppylib.db import catalog
+    from gppylib.commands import unix
+    from gppylib.commands import gp
+    from gppylib.commands.gp import SEGMENT_TIMEOUT_DEFAULT
+    from gppylib.commands import base
+    from gppylib.commands import pg
+    from gppylib.commands import dca
+    from gppylib import pgconf
+    from gppylib.heapchecksum import HeapChecksum
+    from gppylib.commands.pg import PgControlData
+    from gppylib.operations.startSegments import *
+    from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts, mark_segments_down_for_unreachable_hosts
+    from gppylib.utils import TableLogger
+    from gppylib.gp_era import GpEraFile
+except ImportError, e:
+    sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 #
 # THIS IMPORT MUST COME FIRST
 #
