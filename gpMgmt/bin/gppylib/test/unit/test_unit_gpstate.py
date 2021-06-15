@@ -400,11 +400,11 @@ class GpStateDataTestCase(unittest.TestCase):
 
 class GpState(GpTestCase):
     def setUp(self):
-        # because gpstop does not have a .py extension,
+        # because gpstate does not have a .py extension,
         # we have to use imp to import it
-        # if we had a gpstop.py, this is equivalent to:
-        #   import gpstop
-        #   self.subject = gpstop
+        # if we had a gpstate.py, this is equivalent to:
+        #   import gpstate
+        #   self.subject = gpstate
         gpstate_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpstate")
         self.subject = imp.load_source('gpstate', gpstate_file)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
@@ -414,7 +414,6 @@ class GpState(GpTestCase):
         self.mock_gp = Mock()
         self.mock_pgconf = Mock()
         self.mock_os = Mock()
-
         self.mock_conn = Mock()
         self.mock_catalog = Mock()
         self.mock_gperafile = Mock()
@@ -442,9 +441,14 @@ class GpState(GpTestCase):
         self.mock_gp.get_masterdatadir.return_value = 'masterdatadir'
         self.mock_gp.GpCatVersion.local.return_value = 1
         self.mock_gp.GpCatVersionDirectory.local.return_value = 1
+
         sys.argv = ["gpstate"]  # reset to relatively empty args list
 
-
+    def setup_gpstate(self):
+        parser = self.subject.GpSystemStateProgram.createParser()
+        options, args = parser.parse_args()
+        gpstate = self.subject.GpSystemStateProgram.createProgram(options, args)
+        return gpstate
 
     def tearDown(self):
         super(GpState, self).tearDown()
@@ -482,13 +486,12 @@ class GpState(GpTestCase):
             return None
         return self.os_environ[arg]
 
+
+
     def test_gpstate_output_when_netstate_ss_exists(self):
         sys.argv = ["gpstate", "-e"]
-        parser = self.subject.GpSystemStateProgram.createParser()
-
-        options, args = parser.parse_args()
-        gpstate = self.subject.GpSystemStateProgram.createProgram(options, args)
-        gpstate.run()
+        gpstate = self.setup_gpstate()
+        return_code = gpstate.run()
         messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
 
 
