@@ -6,6 +6,7 @@ from gppylib.operations.startSegments import StartSegmentsResult
 
 from gppylib import gparray
 from gppylib.programs.clsSystemState import *
+from gppylib.system.configurationInterface import GpConfigurationProvider
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 
 #
@@ -409,7 +410,7 @@ class GpState(GpTestCase):
         self.subject = imp.load_source('gpstate', gpstate_file)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
         self.os_environ = dict(MASTER_DATA_DIRECTORY='/tmp/mdd', GPHOME='/tmp/gphome', GP_MGMT_PROCESS_COUNT=1,
-                               LANGUAGE=None)
+                               LANGUAGE=None, GP_COMMAND_FAULT_POINT='', HOME='/tmp', PGPASSFILE='/tmp/.pgpass')
 
         self.mock_gp = Mock()
         self.mock_pgconf = Mock()
@@ -422,6 +423,7 @@ class GpState(GpTestCase):
 
         self.apply_patches([
             patch('os.getenv', side_effect=self._get_env),
+            patch('gppylib.db.dbconn.execSQLForSingletonRow', return_value=["foo"]),
             patch('gpstate.gp', return_value=self.mock_gp),
             #patch.object(GpSegStopCmd, "__init__", return_value=None),
             patch('gpstate.pgconf', return_value=self.mock_pgconf),
@@ -435,12 +437,15 @@ class GpState(GpTestCase):
             patch('gpstate.RemoteOperation'),
             patch('gpstate.base.WorkerPool'),
             patch('gpstate.socket.gethostname'),
+            patch('gppylib.programs.clsAddMirrors.configInterface.getConfigurationProvider', return_value=Mock())
         ])
         self.mock_gp = self.get_mock_from_apply_patch('gp')
         self.mock_gplog_log_to_file_only = self.get_mock_from_apply_patch("log_to_file_only")
         self.mock_gp.get_masterdatadir.return_value = 'masterdatadir'
         self.mock_gp.GpCatVersion.local.return_value = 1
         self.mock_gp.GpCatVersionDirectory.local.return_value = 1
+        self.config_provider_mock = mock.MagicMock(spec=GpConfigurationProvider)
+        self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
 
         sys.argv = ["gpstate"]  # reset to relatively empty args list
 
@@ -481,11 +486,9 @@ class GpState(GpTestCase):
 
     def get_error_messages(self):
         return [args[0][0] for args in self.subject.logger.error.call_args_list]
-    def _get_env(self, arg):
-        if arg not in self.os_environ:
-            return None
-        return self.os_environ[arg]
 
+    def _get_env(self, arg,default=None):
+        return self.os_environ[arg]
 
 
     def test_gpstate_output_when_netstate_ss_exists(self):
