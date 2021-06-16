@@ -409,8 +409,16 @@ class GpState(GpTestCase):
         gpstate_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpstate")
         self.subject = imp.load_source('gpstate', gpstate_file)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
+        # self.os_environ = dict(MASTER_DATA_DIRECTORY='/tmp/mdd', GPHOME='/tmp/gphome', GP_MGMT_PROCESS_COUNT=1,
+        #                        LANGUAGE=None, GP_COMMAND_FAULT_POINT='', HOME='/tmp', PGPASSFILE='/tmp/.pgpass')
+
         self.os_environ = dict(MASTER_DATA_DIRECTORY='/tmp/mdd', GPHOME='/tmp/gphome', GP_MGMT_PROCESS_COUNT=1,
-                               LANGUAGE=None, GP_COMMAND_FAULT_POINT='', HOME='/tmp', PGPASSFILE='/tmp/.pgpass')
+                               LANGUAGE=None,GP_COMMAND_FAULT_POINT='', HOME='/tmp', PGPASSFILE='/tmp/.pgpass')
+        self.gparray = self._createGpArrayWith2Primary2Mirrors()
+        # self.segments_by_content_id = GpArray.getSegmentsByContentId(self.gparray.getSegDbList())
+        #
+        # start_result = StartSegmentsResult()
+        # start_result.addSuccess(self.primary0)
 
         self.mock_gp = Mock()
         self.mock_pgconf = Mock()
@@ -419,31 +427,66 @@ class GpState(GpTestCase):
         self.mock_catalog = Mock()
         self.mock_gperafile = Mock()
         self.mock_unix = Mock()
-        self.gparray = self.createGpArrayWith4Primary4Mirrors()
+        self.gparray = self._createGpArrayWith2Primary2Mirrors()
+        self.segments_by_content_id = GpArray.getSegmentsByContentId(self.gparray.getSegDbList())
+
+
+
+#         self.apply_patches([
+#             patch('os.getenv', side_effect=self._get_env),
+#             patch('gppylib.db.dbconn.execSQLForSingletonRow', return_value=["foo"]),
+#             patch('gpstate.gp', return_value=self.mock_gp),
+#             #patch.object(GpSegStopCmd, "__init__", return_value=None),
+#             patch('gpstate.pgconf', return_value=self.mock_pgconf),
+#             patch('gpstate.os', return_value=self.mock_os),
+#             patch('gpstate.dbconn.connect', return_value=self.mock_conn),
+#             patch('gpstate.catalog', return_value=self.mock_catalog),
+#             patch('gpstate.unix', return_value=self.mock_unix),
+#             patch('gpstate.GpEraFile', return_value=self.mock_gperafile),
+#             patch('gpstate.GpArray.initFromCatalog', return_value=self.gparray),
+# #            patch('gpstate.GpArray.getSegmentsByContentId', return_value=self.segments_by_content_id),
+#             patch('gpstate.GpArray.getSegmentsGroupedByValue',
+#                   side_effect=[{2: self.primary0, 3: self.primary1}, [], []]),
+#             patch('gpstate.GpArray.initFromCatalog'),
+#             patch('gpstate.gphostcache.unix.Ping'),
+#             patch('gpstate.RemoteOperation'),
+#             patch('gpstate.base.WorkerPool'),
+#             patch('gpstate.socket.gethostname'),
+#             patch('gppylib.programs.clsAddMirrors.configInterface.getConfigurationProvider', return_value=Mock())
+#         ])
 
         self.apply_patches([
             patch('os.getenv', side_effect=self._get_env),
             patch('gppylib.db.dbconn.execSQLForSingletonRow', return_value=["foo"]),
-            patch('gpstate.gp', return_value=self.mock_gp),
-            #patch.object(GpSegStopCmd, "__init__", return_value=None),
-            patch('gpstate.pgconf', return_value=self.mock_pgconf),
-            patch('gpstate.os', return_value=self.mock_os),
-            patch('gpstate.dbconn.connect', return_value=self.mock_conn),
-            patch('gpstate.catalog', return_value=self.mock_catalog),
-            patch('gpstate.unix', return_value=self.mock_unix),
-            patch('gpstate.GpEraFile', return_value=self.mock_gperafile),
-            patch('gpstate.GpArray.initFromCatalog'),
-            patch('gpstate.gphostcache.unix.Ping'),
-            patch('gpstate.RemoteOperation'),
-            patch('gpstate.base.WorkerPool'),
-            patch('gpstate.socket.gethostname'),
-            patch('gppylib.programs.clsAddMirrors.configInterface.getConfigurationProvider', return_value=Mock())
+            patch('gpstate.os.path.exists'),
+            patch('gpstate.gp'),
+            patch('gpstate.pgconf'),
+            patch('gpstate.unix'),
+            patch('gpstate.dbconn.DbURL'),
+            patch('gpstate.dbconn.connect'),
+            patch('gpstate.GpArray.initFromCatalog', return_value=self.gparray),
+            patch('gpstate.GpArray.getSegmentsByContentId', return_value=self.segments_by_content_id),
+            patch('gpstate.GpArray.getSegmentsGroupedByValue',
+                   side_effect=[{2: self.primary0, 3: self.primary1}, [], []]),
+            patch('gpstate.GpEraFile'),
+            patch('gpstate.userinput'),
+            patch('gpstate.HeapChecksum'),
+            patch('gpstate.log_to_file_only'),
+            patch("gpstate.StartSegmentsOperation"),
+            patch("gpstate.base.WorkerPool"),
+            patch("gpstate.gp.MasterStart.local"),
+            patch("gpstate.pg.DbStatus.local"),
+            patch("gpstate.TableLogger"),
+            patch('gppylib.programs.clsAddMirrors.configInterface.getConfigurationProvider', return_value=Mock()),
+
         ])
+
         self.mock_gp = self.get_mock_from_apply_patch('gp')
         self.mock_gplog_log_to_file_only = self.get_mock_from_apply_patch("log_to_file_only")
         self.mock_gp.get_masterdatadir.return_value = 'masterdatadir'
         self.mock_gp.GpCatVersion.local.return_value = 1
         self.mock_gp.GpCatVersionDirectory.local.return_value = 1
+
         self.config_provider_mock = mock.MagicMock(spec=GpConfigurationProvider)
         self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
 
@@ -458,28 +501,20 @@ class GpState(GpTestCase):
     def tearDown(self):
         super(GpState, self).tearDown()
 
-    def createGpArrayWith4Primary4Mirrors(self):
+    def _createGpArrayWith2Primary2Mirrors(self):
         self.master = Segment.initFromString(
             "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
-
         self.primary0 = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         self.primary1 = Segment.initFromString(
-            "3|1|p|p|s|u|sdw1|sdw1|40001|/data/primary1")
-        self.primary2 = Segment.initFromString(
-            "4|2|p|p|s|u|sdw2|sdw2|40002|/data/primary2")
-        self.primary3 = Segment.initFromString(
-            "5|3|p|p|s|u|sdw2|sdw2|40003|/data/primary3")
-
+            "3|1|p|p|s|u|sdw2|sdw2|40001|/data/primary1")
         self.mirror0 = Segment.initFromString(
-            "6|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
+            "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
         self.mirror1 = Segment.initFromString(
-            "7|1|m|m|s|u|sdw2|sdw2|50001|/data/mirror1")
-        self.mirror2 = Segment.initFromString(
-            "8|2|m|m|s|u|sdw1|sdw1|50002|/data/mirror2")
-        self.mirror3 = Segment.initFromString(
-            "9|3|m|m|s|u|sdw1|sdw1|50003|/data/mirror3")
-        return GpArray([self.master, self.primary0, self.primary1, self.primary2, self.primary3, self.mirror0, self.mirror1, self.mirror2, self.mirror3])
+            "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
+        self.standby = Segment.initFromString(
+            "6|-1|m|m|s|u|sdw3|sdw3|5433|/data/standby")
+        return GpArray([self.master, self.primary0, self.primary1, self.mirror0, self.mirror1])
 
     def get_info_messages(self):
         return [args[0][0] for args in self.subject.logger.info.call_args_list]
@@ -492,7 +527,7 @@ class GpState(GpTestCase):
 
 
     def test_gpstate_output_when_netstate_ss_exists(self):
-        sys.argv = ["gpstate", "-e"]
+        sys.argv = ["gpstate", "-a"]
         gpstate = self.setup_gpstate()
         return_code = gpstate.run()
         messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
