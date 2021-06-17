@@ -4,6 +4,8 @@ from pygresql import pgdb
 from gppylib.gparray import Segment, GpArray
 from gppylib.operations.startSegments import StartSegmentsResult
 
+from gppylib.commands.unix import CommandNotFoundException
+from gppylib.commands import unix
 from gppylib import gparray
 from gppylib.programs.clsSystemState import *
 from gppylib.system.configurationInterface import GpConfigurationProvider
@@ -24,6 +26,7 @@ from mock import Mock, call, patch
 from gppylib.gparray import Segment, GpArray, SegmentPair
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 
+from gppylib.programs.clsSystemState import GpSystemStateProgram
 
 
 def create_segment(**kwargs):
@@ -468,6 +471,7 @@ class GpState(GpTestCase):
             patch('gpstate.GpArray.getSegmentsByContentId', return_value=self.segments_by_content_id),
             patch('gpstate.GpArray.getSegmentsGroupedByValue',
                    side_effect=[{2: self.primary0, 3: self.primary1}, [], []]),
+            patch('gppylib.gparray.GpArray.getSegmentsByHostName', return_value={}),
             patch('gpstate.GpEraFile'),
             patch('gpstate.userinput'),
             patch('gpstate.HeapChecksum'),
@@ -489,6 +493,7 @@ class GpState(GpTestCase):
 
         self.config_provider_mock = mock.MagicMock(spec=GpConfigurationProvider)
         self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
+
 
         sys.argv = ["gpstate"]  # reset to relatively empty args list
 
@@ -525,12 +530,33 @@ class GpState(GpTestCase):
     def _get_env(self, arg,default=None):
         return self.os_environ[arg]
 
+    def find_ss(cmd):
+        if cmd == 'ss':
+            return 'ss'
+        if cmd == 'grep':
+            return '/usr/bin/grep'
+        if cmd == 'awk':
+            return '/usr/bin/awk'
+        else :
+            raise CommandNotFoundException(cmd, '/usr/local/bin')
 
-    def test_gpstate_output_when_netstate_ss_exists(self):
-        sys.argv = ["gpstate", "-a"]
+    @patch.object(GpSystemStateProgram, "_GpSystemStateProgram__showStatusStatistics", return_value=["foo"])
+    @patch.object(GpSystemStateProgram, "_GpSystemStateProgram__showSummaryOfSegmentsWhichRequireAttention", return_value=["foobar"])
+    def test_gpstate_output_when_netstate_ss_exists(self,mock1,mock2):
+        sys.argv = ["gpstate", "-e"]
         gpstate = self.setup_gpstate()
         return_code = gpstate.run()
-        messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
+        log_messages = self.get_info_messages()
+        self.assertNotIn("sdw1   /data/mirror1    50001   u", log_messages)
+
+    @patch('gpstate.unix.findCmdInPath', side_effect=find_ss)
+    def test_PgPortIsActive(self,mock):
+        port = 6000
+        unix.findCmdInPath.side_effect = self.find_ss
+        netstat_port_active = unix.PgPortIsActive.local('check netstat for postmaster port', "/tmp/.s.PGSQL.%d" % port, port)
+        hmm = netstat_port_active
+
+
 
 
 if __name__ == '__main__':
