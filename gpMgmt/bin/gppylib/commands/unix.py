@@ -588,8 +588,11 @@ class PgPortIsActive():
         try:
             sock.bind((remoteHost, self.port))
             result = False
-        except:
-            logger.error("Port %s already in use" % self.port)
+        except OSError as e:
+            if e.errno == errno.EADDRINUSE:
+                logger.error("Port %s already in use" % self.port)
+            else:
+                raise
         sock.close()
         return result
 
