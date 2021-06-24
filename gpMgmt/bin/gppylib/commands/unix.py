@@ -5,6 +5,7 @@
 """
 Set of Classes for executing unix commands.
 """
+import errno
 import os
 import platform
 import psutil
@@ -590,7 +591,7 @@ class PgPortIsActive():
             result = False
         except OSError as e:
             if e.errno == errno.EADDRINUSE:
-                logger.error("Port %s already in use" % self.port)
+                pass
             else:
                 raise
         sock.close()
