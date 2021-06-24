@@ -578,30 +578,30 @@ class Hostname(Command):
 
 
 # --------------tcp port is active -----------------------
-class PgPortIsActive(Command):
+class PgPortIsActive():
     def __init__(self, name, port, file, ctxt=LOCAL, remoteHost=None):
         self.port = port
 
-    def contains_port(self, remoteHost="127.0.0.1"):
+    def port_in_use(self, remoteHost="127.0.0.1"):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         result = True
         try:
             sock.bind((remoteHost, self.port))
             result = False
         except:
-            pass
+            logger.error("Port %s already in use" % self.port)
         sock.close()
         return result
 
     @staticmethod
     def local(name, file, port):
         cmd = PgPortIsActive(name, port, file)
-        return cmd.contains_port()
+        return cmd.port_in_use()
 
     @staticmethod
     def remote(name, file, port, remoteHost):
         cmd = PgPortIsActive(name, port, file, ctxt=REMOTE, remoteHost=remoteHost)
-        return cmd.contains_port(remoteHost)
+        return cmd.port_in_use(remoteHost)
 
 
 # --------------chmod ----------------------
