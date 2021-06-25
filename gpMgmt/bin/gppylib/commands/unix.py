@@ -593,7 +593,8 @@ class PgPortIsActive():
             if e.errno == errno.EADDRINUSE:
                 pass
             else:
-                raise
+                logger.critical('Unexpected socket bound error %d', e.errno)
+                pass
         sock.close()
         return result
 
