@@ -2604,10 +2604,10 @@ def checkTableInconsistentEntry(cat):
     pkey = cat.getPrimaryKey()
     master = cat.isMasterOnly()
     isShared = cat.isShared()
-    if catname == 'pg_extension':
-        columns = cat.getTableColumns(with_acl=False, excluding=['extconfig', 'extcondition'])
-    else:
+    if catname != 'pg_extension':
         columns = cat.getTableColumns(with_acl=False)
+    else:
+        columns = cat.getTableColumns(with_acl=False, excluding=['extconfig', 'extcondition'])
     coltypes = cat.getTableColtypes()
 
     # Skip master only tables
