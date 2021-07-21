@@ -258,16 +258,16 @@ class Popen(subprocess.Popen):
                 poller = select.poll()
                 READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
                 poller.register(fh, READ_ONLY)
-                events = poller.poll()
-                for fd, flags in events:
-                    if flags & (select.POLLIN | select.POLLPRI):
-                        return events
-                    if flags & select.POLLHUP:
-                        poller.unregister(fh)
-                        fh.close()
-                    elif flags & select.POLLERR:
-                        poller.unregister(fh)
-                        fh.close()
+                return poller.poll()
+                # for fd, flags in events:
+                #     if flags & (select.POLLIN | select.POLLPRI):
+                #         return events
+                #     if flags & select.POLLHUP:
+                #         poller.unregister(fh)
+                #         fh.close()
+                #     elif flags & select.POLLERR:
+                #         poller.unregister(fh)
+                #         fh.close()
             except IOError, e:
                 raise
 
