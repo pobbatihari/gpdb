@@ -114,17 +114,19 @@ class Popen(subprocess.Popen):
     
     
     def _read_files(self,timeout,output,error):
-        readList=[]
-        readList.append(self.stdout)
-        readList.append(self.stderr)
-        writeList = []
-        errorList=[]
-        (rset,wset,eset) = self.__select(readList,writeList, errorList, timeout)
+        # readList=[]
+        # readList.append(self.stdout)
+        # readList.append(self.stderr)
+        # writeList = []
+        # errorList=[]
+        # #(rset,wset,eset) = self.__select(readList,writeList, errorList, timeout)
+        fdlist = self.__poll(self.stdout)
 
-        if self.stdout in rset:
+        if len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
             output.append(os.read(self.stdout.fileno(),8192))
 
-        if self.stderr in rset:
+        fdlist = self.__poll(self.stderr)
+        if len([fd for fd in fdlist if fd[0] == self.stderr.fileno()]) > 0:
             error.append(os.read(self.stderr.fileno(),8192))
             
     
@@ -135,27 +137,44 @@ class Popen(subprocess.Popen):
         
         # consume rest of output
         try:
-            (rset,wset,eset) = self.__select([self.stdout],[],[], timeout)
-            while (self.stdout in rset):
+            # (rset,wset,eset) = self.__select([self.stdout],[],[], timeout)
+            # while (self.stdout in rset):
+            #     buffer = os.read(self.stdout.fileno(), 8192)
+            #     if buffer == '':
+            #         break
+            #     else:
+            #         output.append(buffer)
+            #     (rset,wset,eset) = self.__select([self.stdout],[],[], timeout)
+
+            fdlist = self.__poll(self.stdout)
+            while len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
                 buffer = os.read(self.stdout.fileno(), 8192)
                 if buffer == '':
                     break
                 else:
                     output.append(buffer)
-                (rset,wset,eset) = self.__select([self.stdout],[],[], timeout)
+                fdlist = self.__poll(self.stdout)
         except OSError:
             # Pipe closed when we tried to read.  
             pass 
     
         try:
-            (rset,wset,eset) = self.__select([self.stderr],[],[], timeout)    
-            while (self.stderr in rset):
-                buffer = os.read(self.stderr.fileno(), 8192)
+            # (rset,wset,eset) = self.__select([self.stderr],[],[], timeout)
+            # while (self.stderr in rset):
+            #     buffer = os.read(self.stderr.fileno(), 8192)
+            #     if buffer == '':
+            #         break
+            #     else:
+            #         error.append(buffer)
+            #     (rset, wset, eset) = self.__select([self.stderr], [], [], timeout)
+            fdlist = self.__poll(self.stderr)
+            while len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
+                buffer = os.read(self.stdout.fileno(), 8192)
                 if buffer == '':
                     break
                 else:
-                    error.append(buffer)
-                (rset, wset, eset) = self.__select([self.stderr], [], [], timeout)
+                    output.append(buffer)
+                fdlist = self.__poll(self.stderr)
         except OSError:
             # Pipe closed when we tried to read.
             pass 
@@ -231,3 +250,24 @@ class Popen(subprocess.Popen):
                             return ([],[],[])
                 else:
                     raise
+
+    def __poll(self, fh):
+
+        while True:
+            try:
+                poller = select.poll()
+                READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
+                poller.register(fh, READ_ONLY)
+                events = poller.poll()
+                for fd, flags in events:
+                    if flags & (select.POLLIN | select.POLLPRI):
+                        return events
+                    if flags & select.POLLHUP:
+                        poller.unregister(fh)
+                        fh.close()
+                    elif flags & select.POLLERR:
+                        poller.unregister(fh)
+                        fh.close()
+            except IOError, e:
+                raise
+
