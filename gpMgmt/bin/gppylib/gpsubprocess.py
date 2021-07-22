@@ -174,7 +174,7 @@ class Popen(subprocess.Popen):
                     buffer = os.read(self.stdout.fileno(), 8192)
                     if not buffer:
                         break
-                     else:
+                    else:
                         output.append(buffer)
                         yield buffer
         except OSError:
