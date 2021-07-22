@@ -148,16 +148,15 @@ class Popen(subprocess.Popen):
 
             fdlist = self.__poll(self.stdout)
             if len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
-                while True:
-                    buffer = os.read(self.stdout.fileno(), 8192)
-                    if not buffer:
-                        break
-                    else:
-                        output.append(buffer)
-                        yield buffer
+                output.append(os.read(self.stdout.fileno(), 8192))
+
+            # if len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
+            #     with open(self.stdout, 'rb') as f:
+            #         for chunk in iter(lambda: f.read(8192), b''):
+            #             output.append(chunk)
         except OSError:
-            # Pipe closed when we tried to read.  
-            pass 
+            # Pipe closed when we tried to read.
+            pass
     
         try:
             # (rset,wset,eset) = self.__select([self.stderr],[],[], timeout)
@@ -168,15 +167,14 @@ class Popen(subprocess.Popen):
             #     else:
             #         error.append(buffer)
             #     (rset, wset, eset) = self.__select([self.stderr], [], [], timeout)
-            fdlist = self.__poll(self.stderr)
-            if len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
-                while True:
-                    buffer = os.read(self.stdout.fileno(), 8192)
-                    if not buffer:
-                        break
-                    else:
-                        output.append(buffer)
-                        yield buffer
+            fdlist = self.__poll(self.stdout)
+
+            if len([fd for fd in fdlist if fd[0] == self.stderr.fileno()]) > 0:
+                output.append(os.read(self.stderr.fileno(), 8192))
+            # if len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
+            #     with open(self.stderr, 'rb') as f:
+            #         for chunk in iter(lambda: f.read(8192), b''):
+            #             output.append(chunk)
         except OSError:
             # Pipe closed when we tried to read.
             pass 
