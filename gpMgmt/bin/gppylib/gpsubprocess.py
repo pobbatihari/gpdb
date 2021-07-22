@@ -147,13 +147,14 @@ class Popen(subprocess.Popen):
             #     (rset,wset,eset) = self.__select([self.stdout],[],[], timeout)
 
             fdlist = self.__poll(self.stdout)
-            while len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
-                buffer = os.read(self.stdout.fileno(), 8192)
-                if buffer == '':
-                    break
-                else:
-                    output.append(buffer)
-                fdlist = self.__poll(self.stdout)
+            if len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
+                while True:
+                    buffer = os.read(self.stdout.fileno(), 8192)
+                    if not buffer:
+                        break
+                    else:
+                        output.append(buffer)
+                        yield buffer
         except OSError:
             # Pipe closed when we tried to read.  
             pass 
@@ -168,13 +169,14 @@ class Popen(subprocess.Popen):
             #         error.append(buffer)
             #     (rset, wset, eset) = self.__select([self.stderr], [], [], timeout)
             fdlist = self.__poll(self.stderr)
-            while len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
-                buffer = os.read(self.stdout.fileno(), 8192)
-                if buffer == '':
-                    break
-                else:
-                    output.append(buffer)
-                fdlist = self.__poll(self.stderr)
+            if len([fd for fd in fdlist if fd[0] == self.stdout.fileno()]) > 0:
+                while True:
+                    buffer = os.read(self.stdout.fileno(), 8192)
+                    if not buffer:
+                        break
+                     else:
+                        output.append(buffer)
+                        yield buffer
         except OSError:
             # Pipe closed when we tried to read.
             pass 
