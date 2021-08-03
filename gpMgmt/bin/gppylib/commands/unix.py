@@ -494,11 +494,12 @@ class FileDirExists(Command):
     @staticmethod
     def remote(name, remote_host, directory):
         cmd = FileDirExists(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=False)
-        return not cmd.get_return_code()
+        cmd.run(validateAfter=True)
+        return cmd.filedir_exists()
+
 
     def filedir_exists(self):
-        return self.results.stdout.strip().upper() == 'TRUE'
+        return not self.results.rc
 
 
 # -------------scp------------------
