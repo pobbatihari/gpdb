@@ -494,7 +494,7 @@ class FileDirExists(Command):
     @staticmethod
     def remote(name, remote_host, directory):
         cmd = FileDirExists(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
+        cmd.run(validateAfter=False)
         return cmd.filedir_exists()
 
 
