@@ -497,9 +497,8 @@ class FileDirExists(Command):
         cmd.run(validateAfter=False)
         return cmd.filedir_exists()
 
-
     def filedir_exists(self):
-        return not self.results.rc
+        return (not self.results.rc)
 
 
 # -------------scp------------------
