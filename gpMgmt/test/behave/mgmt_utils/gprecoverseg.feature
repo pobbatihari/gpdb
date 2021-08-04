@@ -203,6 +203,14 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
+    Scenario: gprecoverseg should not return error when banner configured on host
+        Given the database is running
+        And all the segments are running
+        When the user sets banner on host
+        And user stops all primary processes
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+
     @demo_cluster
     @concourse_cluster
     Scenario Outline: <scenario> recovery skips unreachable segments
