@@ -365,10 +365,10 @@ def impl(context, command):
 
 
 @when('the user sets banner on host')
-def impl(context, command):
+def impl(context):
     file = '/etc/bashrc'
     command = "echo 'echo \"banner test\" >> %s; source %s'"%(file, file)
-    run_cmd(context, command)
+    run_cmd(command)
 
 @given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
 @when('the user asynchronously sets up to end {process_name} process in {secs} seconds')
