@@ -488,17 +488,17 @@ class RemoveGlob(Command):
 class FileDirExists(Command):
     def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
         self.directory = directory
-        cmdStr = """python  -c "import os; print os.path.exists('%s')" """ % directory
+        cmdStr = "[ -d '%s' ]" % directory
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
     def remote(name, remote_host, directory):
         cmd = FileDirExists(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
+        cmd.run(validateAfter=False)
         return cmd.filedir_exists()
 
     def filedir_exists(self):
-        return self.results.stdout.strip().upper() == 'TRUE'
+        return (not self.results.rc)
 
 
 # -------------scp------------------
@@ -573,51 +573,16 @@ class Hostname(Command):
 
     def get_hostname(self):
         if not self.results:
-            raise Exception, 'Command not yet executed'
+            raise Exception('Command not yet executed')
         return self.results.stdout.strip()
-
-
-# todo: This class should be replaced with gp.IfAddrs
-class InterfaceAddrs(Command):
-    """Returns list of interface IP Addresses.  List does not include loopback."""
-
-    def __init__(self, name, ctxt=LOCAL, remoteHost=None):
-        ifconfig = SYSTEM.getIfconfigCmd()
-        grep = findCmdInPath('grep')
-        awk = findCmdInPath('awk')
-        cut = findCmdInPath('cut')
-        cmdStr = '%s|%s "inet "|%s -v "127.0.0"|%s \'{print \$2}\'|%s -d: -f2' % (ifconfig, grep, grep, awk, cut)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def local(name):
-        cmd = InterfaceAddrs(name)
-        cmd.run(validateAfter=True)
-        return cmd.get_results().stdout.split()
-
-    @staticmethod
-    def remote(name, remoteHost):
-        cmd = InterfaceAddrs(name, ctxt=REMOTE, remoteHost=remoteHost)
-        cmd.run(validateAfter=True)
-        return cmd.get_results().stdout.split()
 
 
 # --------------tcp port is active -----------------------
 class PgPortIsActive(Command):
     def __init__(self, name, port, file, ctxt=LOCAL, remoteHost=None):
         self.port = port
-        try:
-            cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $NF}'" % \
-                     (findCmdInPath('netstat'), findCmdInPath('grep'), file, findCmdInPath('awk'))
-        except CommandNotFoundException:
-            try:
-                cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $5}'" % \
-                         (findCmdInPath('ss'), findCmdInPath('grep'), file, findCmdInPath('awk'))
-            except CommandNotFoundException as err:
-                logger.critical(
-                    "Failed to find active tcp port.")
-                raise
-
+        cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $NF}'" % \
+                 (findCmdInPath('netstat'), findCmdInPath('grep'), file, findCmdInPath('awk'))
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     def contains_port(self):
@@ -628,8 +593,8 @@ class PgPortIsActive(Command):
 
         for r in rows:
             val = r.split('.')
-            tcp_port = int(val[len(val) - 1])
-            if tcp_port == self.port:
+            netstatport = int(val[len(val) - 1])
+            if netstatport == self.port:
                 return True
 
         return False
