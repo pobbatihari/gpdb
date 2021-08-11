@@ -48,7 +48,7 @@ class WorkerPool(object):
 
     halt_command = 'halt command'
 
-    def __init__(self, numWorkers=16, items=None, daemonize=False, logger=gplog.get_default_logger()):
+    def __init__(self, numWorkers=16, items=None, daemonize=False, logger=gplog.get_default_logger(), totalSegs=0):
         if numWorkers <= 0:
             raise Exception("WorkerPool(): numWorkers should be greater than 0.")
         self.workers = []
@@ -58,6 +58,7 @@ class WorkerPool(object):
         self._assigned = 0
         self.daemonize = daemonize
         self.logger = logger
+        self .totalSegs = totalSegs
 
         if items is not None:
             for item in items:
@@ -218,6 +219,7 @@ def join_and_indicate_progress(pool, outfile=sys.stdout, interval=1):
 
     if printed:
         outfile.write('\n')
+
 
 
 class OperationWorkerPool(WorkerPool):

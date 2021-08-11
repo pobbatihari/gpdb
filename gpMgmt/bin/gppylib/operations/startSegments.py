@@ -35,6 +35,24 @@ class FailedSegmentResult:
     def getSegment(self):
         return self.__segment
 
+def print_progress(pool, interval=1):
+        def print_completed_percentage():
+            # pool.completed can change asynchronously; save its value.
+            completed = pool.completed
+            segs_completed = 0
+            pct = 0
+            if pool.assigned:
+                for item in list(pool.completed_queue.queue):
+                    segs_completed += len(item.dblist)
+                    pct = float(completed) / pool.assigned
+                    pool.logger.info(
+                        '%0.2f%% of jobs [%d/%d segments] completed' % (pct * 100, segs_completed, int(pool.totalSegs)))
+            return completed >= pool.assigned
+            # print_completed_percentage() returns True if we're done.
+
+        while not print_completed_percentage():
+            pool.join(interval)
+
 #
 # Note that a failed segments may still be up -- it could be that the conversion to mirror/primary mode failed
 #
@@ -123,6 +141,7 @@ class StartSegmentsOperation:
         # now do the start!
         numNodes = len(gpArray.getHostList())
         numWorkers = self.__workerPool.getNumWorkers()
+        self.__workerPool.totalSegs=len(segments)
         if numWorkers >= numNodes:
             # We are in a situation where we can start the entire cluster at once.
             assert startMethod == START_AS_PRIMARY_OR_MIRROR or startMethod == START_AS_MIRRORLESS
@@ -149,6 +168,8 @@ class StartSegmentsOperation:
         # done!
         assert totalToAttempt == len(result.getFailedSegmentObjs()) + len(result.getSuccessfulSegments())
         return result
+
+
 
     def __runStartCommand(self, segments, startMethod, numContentsInCluster, resultOut, gpArray, era):
         """
@@ -205,7 +226,8 @@ class StartSegmentsOperation:
         if self.__quiet:
             self.__workerPool.join()
         else:
-            base.join_and_indicate_progress(self.__workerPool)
+            print_progress(self.__workerPool)
+            #base.join_and_indicate_progress(self.__workerPool)
 
         # process results
         self.__processStartOrConvertCommands(resultOut)
