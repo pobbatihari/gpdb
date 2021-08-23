@@ -363,6 +363,12 @@ def impl(context, env_var):
 def impl(context, command):
     run_gpcommand(context, command)
 
+@when('the user sets banner on host')
+def impl(context):
+    file = '/etc/bashrc'
+    command = "echo 'echo \"banner test\"' >> %s; source %s" % (file, file)
+    run_cmd(command)
+    
 
 @given('the user asynchronously sets up to end {process_name} process in {secs} seconds')
 @when('the user asynchronously sets up to end {process_name} process in {secs} seconds')
