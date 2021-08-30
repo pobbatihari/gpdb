@@ -168,13 +168,10 @@ class PgControlData(Command):
                 if len(l) > 0:
                     split_line = l.split(':', 1)
                     # avoid ValueErrors when there is no value to the key
-                    if len(split_line) == 1:
-                        n = split_line[0]
-                        v = ''
-                    elif len(split_line) == 2:
-                        n = split_line[0]
-                        v = split_line[1]
-                    self.data[n.strip()] = v.strip() 
+                    n = split_line[0]
+                    v = split_line[1] if len(split_line) == 2 else ''
+                    self.data[n.strip()] = v.strip()
+                self.data[n.strip()] = v.strip()
         return self.data[name]
 
     def get_datadir(self):
