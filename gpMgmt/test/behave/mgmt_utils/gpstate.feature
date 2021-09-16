@@ -561,5 +561,5 @@ Feature: gpstate tests
         Given a standard local demo cluster is running
         And the user runs "unset PGDATABASE"
         And the user runs "gpstate -e -v"
-        Then gpstate should print "pg_isready -q -h * -p *" to stdout
+        Then gpstate should print "pg_isready -q -h .* -p .*" to stdout
         And gpstate should print "All segments are running normally" to stdout
