@@ -548,6 +548,10 @@ Feature: gpstate tests
          Then gpstate output looks like
              | Cluster Expansion State = No Expansion Detected |
 
+
+########################### @concourse_cluster tests ###########################
+# The @concourse_cluster tag denotes the scenario that requires a remote cluster
+
     @concourse_cluster
     Scenario: gpstate -e -v logs no errors without PGDATABASE flag
         Given a standard local demo cluster is running
