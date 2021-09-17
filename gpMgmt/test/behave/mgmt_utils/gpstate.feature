@@ -554,7 +554,8 @@ Feature: gpstate tests
 
     @concourse_cluster
     Scenario: gpstate -e -v logs no errors without PGDATABASE flag
-        Given a standard local demo cluster is running
+        Given the database is running
+        And all the segments are running
         And the user runs "export PGDATABASE='postgres'"
         And the user runs "gpstate -e -v"
         Then gpstate should print "pg_isready -q -h .* -p .* -d postgres" to stdout
@@ -562,7 +563,8 @@ Feature: gpstate tests
 
     @concourse_cluster
     Scenario: gpstate -e -v logs no errors without PGDATABASE flag
-        Given a standard local demo cluster is running
+        Given the database is running
+        And all the segments are running
         And the user runs "unset PGDATABASE"
         And the user runs "gpstate -e -v"
         Then gpstate should print "pg_isready -q -h .* -p .*" to stdout
