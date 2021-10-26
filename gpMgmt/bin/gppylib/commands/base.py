@@ -46,7 +46,7 @@ class WorkerPool(object):
 
     halt_command = 'halt command'
 
-    def __init__(self, numWorkers=16, items=None, daemonize=False, logger=gplog.get_default_logger()):
+    def __init__(self, numWorkers=16, items=None, daemonize=False, logger=gplog.get_default_logger(), totalsegs=0):
         if numWorkers <= 0:
             raise Exception("WorkerPool(): numWorkers should be greater than 0.")
         self.workers = []
@@ -56,6 +56,7 @@ class WorkerPool(object):
         self._assigned = 0
         self.daemonize = daemonize
         self.logger = logger
+        self.totalSegs = totalsegs
 
         if items is not None:
             for item in items:

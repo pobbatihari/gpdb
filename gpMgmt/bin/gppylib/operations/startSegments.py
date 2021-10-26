@@ -8,6 +8,7 @@ from gppylib.commands import base
 from gppylib.gparray import GpArray
 from gppylib.commands.gp import SEGMENT_TIMEOUT_DEFAULT
 from gppylib.mainUtils import parseStatusLine
+from datetime import datetime
 
 logger = get_default_logger()
 
@@ -18,6 +19,41 @@ MIRROR_MODE_MIRROR = "mirror"
 MIRROR_MODE_MIRRORLESS = "mirrorless"
 MIRROR_MODE_PRIMARY = "primary"
 MIRROR_MODE_QUIESCENT = "quiescent"
+
+def update_progress(segs_completed, tot_segs, starttime = None, outfile=sys.stdout):
+    barLength = 50 # Modify this to change the length of the progress bar
+    status = ""
+    if starttime == None:
+        starttime = datetime.datetime.now()
+    progress = float(segs_completed) / float(tot_segs)
+    if isinstance(progress, int):
+        progress = float(progress)
+    if not isinstance(progress, float):
+        progress = 0
+        status = "error: progress var must be float\r\n"
+    if progress < 0:
+        progress = 0
+        status = "Halt...\r\n"
+    if progress >= 1:
+        progress = 1
+        status = "\r\n"
+    block = int(round(barLength*progress))
+    text = "\rProcessing: {1}% ( {3} of {4} segs) |{0}|  Elapsed time: {5} {2}".format("="*block + "-"*(barLength-block), progress*100, status, segs_completed, tot_segs, (datetime.datetime.now()-starttime) )
+    outfile.write(text)
+    outfile.flush()
+
+def print_progress(pool, interval=1):
+    starttime = datetime.datetime.now()
+    update_progress(0, int(pool.totalSegs), starttime)
+    while not pool.join(interval):
+        segs_completed = 0
+        for item in list(pool.completed_queue.queue):
+                segs_completed += len(item.dblist)
+                update_progress(segs_completed, int(pool.totalSegs), starttime)
+    segs_completed =0
+    for item in list(pool.completed_queue.queue):
+                segs_completed += len(item.dblist)
+    update_progress(segs_completed, int(pool.totalSegs), starttime)
 
 class FailedSegmentResult:
 
@@ -107,6 +143,7 @@ class StartSegmentsOperation:
         # now do the start!
         numNodes = len(gpArray.getHostList())
         numWorkers = self.__workerPool.getNumWorkers()
+        self.__workerPool.totalSegs = len(segments)
         if numWorkers >= numNodes:
             # We are in a situation where we can start the entire cluster at once.
             assert startMethod == START_AS_PRIMARY_OR_MIRROR or startMethod == START_AS_MIRRORLESS
@@ -129,6 +166,15 @@ class StartSegmentsOperation:
                 self.__runStartCommand(segments, startMethod, numContentsInCluster, result, gpArray, era)
             else:
                 raise Exception("Invalid startMethod %s" % startMethod)
+
+        if self.__quiet:
+            self.__workerPool.join()
+        else:
+           # base.join_and_indicate_progress(self.__workerPool)
+
+        # process results
+        self.__processStartOrConvertCommands(result)
+        self.__workerPool.empty_completed_items()
 
         # done!
         assert totalToAttempt == len(result.getFailedSegmentObjs()) + len(result.getSuccessfulSegments())
@@ -186,14 +232,14 @@ class StartSegmentsOperation:
                                    logfileDirectory=self.logfileDirectory)
             self.__workerPool.addCommand(cmd)
 
-        if self.__quiet:
-            self.__workerPool.join()
-        else:
-            base.join_and_indicate_progress(self.__workerPool)
-
-        # process results
-        self.__processStartOrConvertCommands(resultOut)
-        self.__workerPool.empty_completed_items()
+        # if self.__quiet:
+        #     self.__workerPool.join()
+        # else:
+        #     base.join_and_indicate_progress(self.__workerPool)
+        #
+        # # process results
+        # self.__processStartOrConvertCommands(resultOut)
+        # self.__workerPool.empty_completed_items()
 
     def __processStartOrConvertCommands(self, resultOut):
         logger.info("Process results...")
