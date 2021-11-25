@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#test
 # Install needed packages. Please add to this list if you discover additional prerequisites.
 sudo yum install -y epel-release
 sudo yum install -y \
