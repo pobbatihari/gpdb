@@ -341,7 +341,7 @@ class GpRecoverSegmentProgram:
 
             self.displayRecovery(mirrorBuilder, gpArray)
             self.__displayRecoveryWarnings(mirrorBuilder)
-
+            self.checkForTargetDirectorypermissions(mirrorBuilder)
             if self.__options.interactive:
                 if not userinput.ask_yesno(None, "\nContinue with segment recovery procedure", 'N'):
                     raise UserAbortedException()
@@ -378,6 +378,29 @@ class GpRecoverSegmentProgram:
         for _ in range(2):
             dbconn.execSQL(conn,"SELECT gp_request_fts_probe_scan()")
         conn.close()
+
+    def checkForTargetDirectorypermissions(self, mirrorBuilder):
+        targetDirPermission = '700'
+        invalidTargetDir = []
+        for toRecover in mirrorBuilder.getMirrorsToBuild():
+            if toRecover.getFailoverSegment() is not None:
+                targetDir = toRecover.getFailoverSegment().getSegmentDataDirectory()
+                if not self.checkFilePermission(targetDir, targetDirPermission):
+                    invalidTargetDir.append(targetDir)
+        if len(invalidTargetDir) != 0:
+            for dir in invalidTargetDir:
+                self.logger.error(
+                    "'%s' does not have valid permission '%s'" % (dir, targetDirPermission))
+            raise Exception("Invalid Target directory permissions, please correct and try again...")
+
+    def checkFilePermission(self, path, chmodString):
+        try:
+            actual = oct(os.stat(path).st_mode)[-4:]
+            if int(actual, 8) != int(chmodString, 8):
+                return False
+            return True
+        except Exception as e:
+            raise Exception("%s", str(e))
 
     def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
         live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]

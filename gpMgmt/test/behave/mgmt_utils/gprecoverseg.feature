@@ -133,6 +133,20 @@ Feature: gprecoverseg tests
       And gprecoverseg should return a return code of 0
       And the row count from table "t" in "postgres" is verified against the saved data
 
+    Scenario: gprecoverseg full recovery should fail if target data directory has invalid permissions
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user immediately stops all primary processes
+        And 2 gprecoverseg directory under '/tmp' with mode '0750' is created
+        And a gprecoverseg input file is created for mixed recovery for 2 segments with full and 1 incremental with invalid target directory
+        When the user runs gprecoverseg with input file and additional args "-a"
+        And gprecoverseg should print "Invalid Target directory permissions, please correct and try again..." to stdout
+        And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
+        And gprecoverseg should not print "pg_rewind: Done!" to stdout
+        And the user runs "gprecoverseg -ar"
+        And gprecoverseg should return a return code of 0
+
     Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
         Given the database is running
         And all the segments are running

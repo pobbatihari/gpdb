@@ -330,6 +330,29 @@ def impl(context, full, incr):
     with open(context.mirror_context.input_file_path(), 'w') as fd:
         fd.write(contents)
 
+@given("a gprecoverseg input file is created for mixed recovery for {full} segments with full and {incr} incremental with invalid target directory")
+def impl(context, full, incr):
+    full_seg_count = int(full)
+    incr_seg_count = int(incr)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    contents = ''
+    for i in range(len(segments)):
+        mirror = segments[i].mirrorDB
+        valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
+                                     mirror.getSegmentPort(),
+                                     mirror.getSegmentDataDirectory())
+        if full_seg_count > 0:
+                invalid_dir_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
+                                                   mirror.getSegmentPort(),
+                                                   context.mirror_context.working_directory[full_seg_count-1])
+                contents += '%s %s\n' % (valid_config, invalid_dir_config)
+                full_seg_count -= 1
+        elif incr_seg_count > 0:
+                incr_seg_count -= 1
+                contents += '%s\n' % (valid_config)
+        context.mirror_context.input_file = "gprecoverseg_mixed.txt"
+        with open(context.mirror_context.input_file_path(), 'w') as fd:
+                fd.write(contents)
 
 @given("{num} gpmovemirrors directory under '{parent_dir}' with mode '{mode}' is created")
 @given("{num} gprecoverseg directory under '{parent_dir}' with mode '{mode}' is created")
