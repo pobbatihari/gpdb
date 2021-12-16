@@ -345,7 +345,7 @@ def impl(context, full, incr, dir_type):
                 if dir_type == 'dummy':
                     invalid_dir_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
                                             mirror.getSegmentPort(),
-                                            "%s/%s"%(context.working_directory,full_seg_count))
+                                            "%s/%s"%(context.mirror_context.working_directory[0],full_seg_count))
                 elif dir_type == 'invalid':
                     invalid_dir_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
                                             mirror.getSegmentPort(),
