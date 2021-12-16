@@ -143,7 +143,7 @@ Feature: gprecoverseg tests
         And a gprecoverseg input file is created for mixed recovery for 2 segments with full and 1 incremental with 'invalid' target directory
         When the user runs gprecoverseg with input file and additional args "-a"
         And gprecoverseg should return a return code of 2
-        And gprecoverseg should print "Segment directory * exists but does not have valid permissions" to stdout
+        And gprecoverseg should print "exists but does not have valid permissions" to stdout
         And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
         And gprecoverseg should not print "pg_rewind: Done!" to stdout
         And the user runs "gprecoverseg -a"

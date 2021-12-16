@@ -255,7 +255,6 @@ class SegSetupRecoveryTestCase(GpTestCase):
         mock_dburl.return_value = Mock()
         buf = io.StringIO()
         with tempfile.TemporaryDirectory() as d:
-
             with redirect_stderr(buf):
                 with self.assertRaises(SystemExit) as ex:
                     full_ri = RecoveryInfo('target_data_dir1', 5001, 1, 'source_hostname1',
@@ -326,7 +325,5 @@ class SegSetupRecoveryTestCase(GpTestCase):
             self.full_r1, self.incr_r2], True, self.mock_logger)
         self._assert_validation_full_call(cmd_list[0], self.full_r1, expected_forceoverwrite=True)
         self._assert_setup_incr_call(cmd_list[1], self.incr_r2)
-
-
 
 
