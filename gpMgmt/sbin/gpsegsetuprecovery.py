@@ -75,26 +75,41 @@ class ValidationForFullRecovery(Command):
     def run(self):
         self.logger.info("Validate data directories for segment with dbid {}".
                          format(self.recovery_info.target_segment_dbid))
-        if not self.forceoverwrite:
-            self.validate_failover_data_directory()
+
+        self.validate_failover_data_directory(self.forceoverwrite)
+
         self.logger.info("Validation successful for segment with dbid: {}".format(
             self.recovery_info.target_segment_dbid))
 
-    def validate_failover_data_directory(self):
+    def validate_failover_data_directory(self, forceoverwrite):
         """
         Raises ValidationException when a validation problem is detected
         """
 
-        if not os.path.exists(os.path.dirname(self.recovery_info.target_datadir)):
-            self.make_or_update_data_directory()
+        if not forceoverwrite:
+            if not os.path.exists(os.path.dirname(self.recovery_info.target_datadir)):
+                self.make_or_update_data_directory()
 
-        if not os.path.exists(self.recovery_info.target_datadir):
-            return
+            if not os.path.exists(self.recovery_info.target_datadir):
+                return
 
-        if len(os.listdir(self.recovery_info.target_datadir)) != 0:
-            raise ValidationException("for segment with port {}: Segment directory '{}' exists but is not empty!"
+            if len(os.listdir(self.recovery_info.target_datadir)) != 0:
+                raise ValidationException("for segment with port {}: Segment directory '{}' exists but is not empty!"
                                       .format(self.recovery_info.target_port,
                                               self.recovery_info.target_datadir))
+        elif os.path.exists(self.recovery_info.target_datadir) and not self.checkFilePermission(self.recovery_info.target_datadir, '700'):
+                raise ValidationException("for segment with port {}: Segment directory '{}' exists but does not have valid permissions"
+                                          .format(self.recovery_info.target_port,
+                                            self.recovery_info.target_datadir))
+
+    def checkFilePermission(self, path, expected_permissions):
+        try:
+            dirpermissions = oct(os.stat(path).st_mode)[-4:]
+            if int(dirpermissions, 8) != int(expected_permissions, 8):
+                return False
+            return True
+        except Exception as e:
+            raise Exception("%s", str(e))
 
     def make_or_update_data_directory(self):
         if os.path.exists(self.recovery_info.target_datadir):

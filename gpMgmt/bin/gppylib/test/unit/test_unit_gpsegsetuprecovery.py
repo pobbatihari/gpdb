@@ -138,6 +138,18 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
 
         self._assert_failed("mkdirs failed")
 
+    def test_checkFilePermissions(self):
+        tmp_dir1 = '/tmp/testdir_CFP1'
+        tmp_dir2 = '/tmp/testdir_CFP2'
+        os.makedirs(tmp_dir1, mode=0o750)
+        os.makedirs(tmp_dir2, mode=0o700)
+        self.assertFalse(self.validation_recovery_cmd.checkFilePermission(tmp_dir1, '700'))
+        self.assertTrue(self.validation_recovery_cmd.checkFilePermission(tmp_dir2, '700'))
+        os.rmdir(tmp_dir1)
+        os.rmdir(tmp_dir2)
+        with self.assertRaises(Exception):
+            self.validation_recovery_cmd.checkFilePermission(tmp_dir1, '700')
+            self.validation_recovery_cmd.checkFilePermission(tmp_dir2, '700')
 
 class SetupForIncrementalRecoveryTestCase(GpTestCase):
     def setUp(self):
@@ -243,6 +255,7 @@ class SegSetupRecoveryTestCase(GpTestCase):
         mock_dburl.return_value = Mock()
         buf = io.StringIO()
         with tempfile.TemporaryDirectory() as d:
+
             with redirect_stderr(buf):
                 with self.assertRaises(SystemExit) as ex:
                     full_ri = RecoveryInfo('target_data_dir1', 5001, 1, 'source_hostname1',
@@ -313,4 +326,7 @@ class SegSetupRecoveryTestCase(GpTestCase):
             self.full_r1, self.incr_r2], True, self.mock_logger)
         self._assert_validation_full_call(cmd_list[0], self.full_r1, expected_forceoverwrite=True)
         self._assert_setup_incr_call(cmd_list[1], self.incr_r2)
+
+
+
 

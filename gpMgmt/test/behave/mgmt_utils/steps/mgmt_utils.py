@@ -677,7 +677,7 @@ def impl(context, command, out_msg):
 def impl(context, command, out_msg):
     check_stdout_msg(context, out_msg)
 
-
+@when('{command} should not print "{out_msg}" to stdout')
 @then('{command} should not print "{out_msg}" to stdout')
 def impl(context, command, out_msg):
     check_string_not_present_stdout(context, out_msg)
