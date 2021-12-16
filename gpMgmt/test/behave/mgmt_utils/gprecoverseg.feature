@@ -141,11 +141,14 @@ Feature: gprecoverseg tests
         And 2 gprecoverseg directory under '/tmp' with mode '0750' is created
         And a gprecoverseg input file is created for mixed recovery for 2 segments with full and 1 incremental with invalid target directory
         When the user runs gprecoverseg with input file and additional args "-a"
-        And gprecoverseg should print "Invalid Target directory permissions, please correct and try again..." to stdout
+        And gprecoverseg should print "Invalid Target directory permissions, please check and try again..." to stdout
         And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
         And gprecoverseg should not print "pg_rewind: Done!" to stdout
-        And the user runs "gprecoverseg -ar"
+        And the user runs "gprecoverseg -a"
         And gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
 
     Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
         Given the database is running
@@ -158,8 +161,8 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should print "pg_rewind: Done!" to stdout for each primary
         And gpAdminLogs directory has no "pg_rewind*" files
-      And gpAdminLogs directory has "gpsegsetuprecovery*" files
-      And gpAdminLogs directory has "gpsegrecovery*" files
+        And gpAdminLogs directory has "gpsegsetuprecovery*" files
+        And gpAdminLogs directory has "gpsegrecovery*" files
         And all the segments are running
         And the segments are synchronized
         And the cluster is rebalanced

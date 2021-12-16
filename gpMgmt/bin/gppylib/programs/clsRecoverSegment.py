@@ -341,7 +341,7 @@ class GpRecoverSegmentProgram:
 
             self.displayRecovery(mirrorBuilder, gpArray)
             self.__displayRecoveryWarnings(mirrorBuilder)
-            self.checkForTargetDirectorypermissions(mirrorBuilder)
+            self.checkForTargetDirectoryPermissions(mirrorBuilder)
             if self.__options.interactive:
                 if not userinput.ask_yesno(None, "\nContinue with segment recovery procedure", 'N'):
                     raise UserAbortedException()
@@ -379,7 +379,7 @@ class GpRecoverSegmentProgram:
             dbconn.execSQL(conn,"SELECT gp_request_fts_probe_scan()")
         conn.close()
 
-    def checkForTargetDirectorypermissions(self, mirrorBuilder):
+    def checkForTargetDirectoryPermissions(self, mirrorBuilder):
         targetDirPermission = '700'
         invalidTargetDir = []
         for toRecover in mirrorBuilder.getMirrorsToBuild():
@@ -391,7 +391,7 @@ class GpRecoverSegmentProgram:
             for dir in invalidTargetDir:
                 self.logger.error(
                     "'%s' does not have valid permission '%s'" % (dir, targetDirPermission))
-            raise Exception("Invalid Target directory permissions, please correct and try again...")
+            raise Exception("Invalid Target directory permissions, please check and try again...")
 
     def checkFilePermission(self, path, chmodString):
         try:

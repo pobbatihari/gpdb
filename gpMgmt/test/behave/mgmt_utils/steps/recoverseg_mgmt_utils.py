@@ -129,6 +129,7 @@ def impl(context):
     for seg in primary_segs:
         subprocess.check_call(['pg_isready', '-h', seg.getSegmentHostName(), '-p', str(seg.getSegmentPort())])
 
+@when('the cluster is rebalanced')
 @then('the cluster is rebalanced')
 def impl(context):
     context.execute_steps(u'''
