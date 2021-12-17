@@ -138,18 +138,22 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
 
         self._assert_failed("mkdirs failed")
 
-    def test_checkFilePermissions(self):
-        tmp_dir1 = '/tmp/testdir_CFP1'
-        tmp_dir2 = '/tmp/testdir_CFP2'
-        os.makedirs(tmp_dir1, mode=0o750)
-        os.makedirs(tmp_dir2, mode=0o700)
-        self.assertFalse(self.validation_recovery_cmd.checkFilePermission(tmp_dir1, '700'))
-        self.assertTrue(self.validation_recovery_cmd.checkFilePermission(tmp_dir2, '700'))
-        os.rmdir(tmp_dir1)
-        os.rmdir(tmp_dir2)
-        with self.assertRaises(Exception):
-            self.validation_recovery_cmd.checkFilePermission(tmp_dir1, '700')
-            self.validation_recovery_cmd.checkFilePermission(tmp_dir2, '700')
+    def test_forceoverwrite_True_dir_exists_with_invalid_permissions(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.seg_recovery_info.target_datadir = d
+            os.chmod(self.seg_recovery_info.target_datadir, 0o750)
+            self.validation_recovery_cmd.forceoverwrite = True
+            self.validation_recovery_cmd.run()
+            expected_error = "for segment with port {}: Segment directory '{}' exists but does not have valid permissions" \
+                .format(self.seg_recovery_info.target_port, os.path.dirname(d))
+            self._assert_failed(expected_error)
+
+    def test_forceoverwrite_True_dir_exists_with_permissions(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.seg_recovery_info.target_datadir = d
+            self.validation_recovery_cmd.forceoverwrite = True
+            self.validation_recovery_cmd.run()
+            self._assert_passed()
 
 class SetupForIncrementalRecoveryTestCase(GpTestCase):
     def setUp(self):

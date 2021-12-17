@@ -97,26 +97,17 @@ class ValidationForFullRecovery(Command):
                 raise ValidationException("for segment with port {}: Segment directory '{}' exists but is not empty!"
                                       .format(self.recovery_info.target_port,
                                               self.recovery_info.target_datadir))
-        elif os.path.exists(self.recovery_info.target_datadir) and not self.checkFilePermission(self.recovery_info.target_datadir, '700'):
+        elif os.path.exists(self.recovery_info.target_datadir) and\
+            oct(os.stat(self.recovery_info.target_datadir).st_mode & 0o777) != oct(0o700):
                 raise ValidationException("for segment with port {}: Segment directory '{}' exists but does not have valid permissions"
                                           .format(self.recovery_info.target_port,
                                             self.recovery_info.target_datadir))
-
-    def checkFilePermission(self, path, expected_permissions):
-        try:
-            dirpermissions = oct(os.stat(path).st_mode)[-4:]
-            if int(dirpermissions, 8) != int(expected_permissions, 8):
-                return False
-            return True
-        except Exception as e:
-            raise Exception("%s", str(e))
 
     def make_or_update_data_directory(self):
         if os.path.exists(self.recovery_info.target_datadir):
             os.chmod(self.recovery_info.target_datadir, 0o700)
         else:
             os.makedirs(self.recovery_info.target_datadir, 0o700)
-
 
 
 #TODO we may not need this class
