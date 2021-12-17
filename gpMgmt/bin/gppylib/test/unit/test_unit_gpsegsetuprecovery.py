@@ -145,7 +145,7 @@ class ValidationForFullRecoveryTestCase(GpTestCase):
             self.validation_recovery_cmd.forceoverwrite = True
             self.validation_recovery_cmd.run()
             expected_error = "for segment with port {}: Segment directory '{}' exists but does not have valid permissions" \
-                .format(self.seg_recovery_info.target_port, os.path.dirname(d))
+                .format(self.seg_recovery_info.target_port, d)
             self._assert_failed(expected_error)
 
     def test_forceoverwrite_True_dir_exists_with_permissions(self):
