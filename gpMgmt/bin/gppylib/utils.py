@@ -8,7 +8,7 @@ from xml.dom import Node
 
 import pgdb
 from gppylib.gplog import *
-
+import json
 logger = get_default_logger()
 
 _debug=0
@@ -407,12 +407,24 @@ class TableLogger:
         else: self.info(line)
         return self
 
-    def outputTable(self):
+    def outputTable(self, json_out=False):
         """
         return self
         """
         lines = self.__lines
         warningLineNumbers = self.__warningLines
+
+        if json_out:
+           with open("%s/gpstate.json" % get_logger_dir(), "a+") as outfile:
+               res_dict = {}
+               timestamp = "strtime"
+               res_dict[timestamp] = {}
+               for line in lines:
+                    if line is None:
+                        json.dump(res_dict, outfile, indent=4)
+                    elif len(line) == 2:
+                        res_dict[timestamp][line[0]] = line[1].strip('= ')
+               json.dump(res_dict, outfile, indent=4)
 
         lineWidth = []
         for line in lines:

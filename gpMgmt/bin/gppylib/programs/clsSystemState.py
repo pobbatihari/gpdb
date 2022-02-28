@@ -846,6 +846,7 @@ class GpSystemStateProgram:
 
         returns the exit code
         """
+
         hasWarnings = False
         hostNameToResults = self.__fetchAllSegmentData(gpArray)
 
@@ -908,7 +909,7 @@ class GpSystemStateProgram:
         tabLog.info(["Postgres version", "= %s" % pgVersion])
 
         self.__appendStandbySummary(hostNameToResults, gpArray.standbyCoordinator, tabLog)
-        tabLog.outputTable()
+        tabLog.outputTable(json_out=self.__options.json)
         hasWarnings = hasWarnings or tabLog.hasWarnings()
 
         #
@@ -924,7 +925,7 @@ class GpSystemStateProgram:
             toSuppress = {} if gpArray.hasMirrors else categoriesToIgnoreWithoutMirroring
             data.addSegmentToTableLogger(tabLog, seg, toSuppress)
         self.__showExpandStatusSummary(gpEnv, tabLog, showPreSep=True, showPostSep=True)
-        tabLog.outputTable()
+        tabLog.outputTable(json_out=self.__options.json)
         hasWarnings = hasWarnings or tabLog.hasWarnings()
 
         self.__addClusterDownWarning(gpArray, data)
@@ -1570,6 +1571,10 @@ class GpSystemStateProgram:
                             dest="retries",
                             metavar="<retries>",
                             help="Database connection retries. [default: %default]")
+        addTo.add_option("--json", None, default=False, action="store_true",
+                         dest="json",
+                         metavar="<json>",
+                         help="Show output in json")
 
         parser.set_defaults()
         return parser
