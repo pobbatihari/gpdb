@@ -452,6 +452,34 @@ def impl(context, content, mode):
             context.mirror_new_location[content] = valid_config_new
             break
 
+@given("a gprecoverseg input file is created for mixed recovery for {full} segments with full and {incr} incremental with '{dir_type}' target directory")
+def impl(context, full, incr, dir_type):
+    full_seg_count = int(full)
+    incr_seg_count = int(incr)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    contents = ''
+    for i in range(len(segments)):
+        mirror = segments[i].mirrorDB
+        valid_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                        mirror.getSegmentPort(),
+                                        mirror.getSegmentDataDirectory())
+        if full_seg_count > 0:
+                if dir_type == 'dummy':
+                    invalid_dir_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                            mirror.getSegmentPort(),
+                                            "%s/%s"%(context.mirror_context.working_directory[0],full_seg_count))
+                elif dir_type == 'invalid':
+                    invalid_dir_config = '{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                            mirror.getSegmentPort(),
+                                            context.mirror_context.working_directory[full_seg_count-1])
+                contents += '{} {}\n'.format(valid_config, invalid_dir_config)
+                full_seg_count -= 1
+        elif incr_seg_count > 0:
+                incr_seg_count -= 1
+                contents += '{}\n'.format(valid_config)
+        context.mirror_context.input_file = "gprecoverseg_mixed.txt"
+        with open(context.mirror_context.input_file_path(), 'w') as fd:
+                fd.write(contents)
 
 @then('the old data directories are cleaned up for content {content_ids}')
 def impl(context, content_ids):
