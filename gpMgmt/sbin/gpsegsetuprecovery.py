@@ -71,8 +71,9 @@ class ValidationForFullRecovery(Command):
     def run(self):
         self.logger.info("Validate data directories for segment with dbid {}".
                          format(self.recovery_info.target_segment_dbid))
-        if not self.forceoverwrite:
-            self.validate_failover_data_directory(self.forceoverwrite)
+
+        self.validate_failover_data_directory(self.forceoverwrite)
+
         self.logger.info("Validation successful for segment with dbid: {}".format(
             self.recovery_info.target_segment_dbid))
 
