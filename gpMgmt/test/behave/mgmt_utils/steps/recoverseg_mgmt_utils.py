@@ -284,7 +284,7 @@ def impl(context, recovery_type, content_ids):
 
 @then('check if {recovery_type} recovery failed for mirrors with content {content_ids} for {utility}')
 def recovery_fail_check(context, recovery_type, content_ids, utility):
-    return_code = 1
+    return_code = 2
     if utility == 'gpmovemirrors':
         return_code = 3
 
@@ -314,7 +314,7 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
 @when('check if start failed for contents {content_ids} during full recovery for {utility}')
 @then('check if start failed for contents {content_ids} during full recovery for {utility}')
 def start_fail_check(context, content_ids, utility):
-    return_code = 1
+    return_code = 2
     if utility == 'gpmovemirrors':
         return_code = 3
 
