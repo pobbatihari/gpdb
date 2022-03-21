@@ -314,7 +314,7 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
 @when('check if start failed for contents {content_ids} during full recovery for {utility}')
 @then('check if start failed for contents {content_ids} during full recovery for {utility}')
 def start_fail_check(context, content_ids, utility):
-    return_code = 2
+    return_code = 1
     if utility == 'gpmovemirrors':
         return_code = 3
 
