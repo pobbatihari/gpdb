@@ -600,7 +600,7 @@ Feature: gprecoverseg tests
     And edit the input file to recover mirror with content 1 full inplace
     And edit the input file to recover mirror with content 2 to a new directory on remote host with mode 0000
     When the user runs gprecoverseg with input file and additional args "-a"
-    Then gprecoverseg should return a return code of 1
+    Then gprecoverseg should return a return code of 2
     And user can start transactions
 
     And check if incremental recovery failed for mirrors with content 0 for gprecoverseg

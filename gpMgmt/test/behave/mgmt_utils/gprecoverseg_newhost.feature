@@ -44,7 +44,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
     And datadirs from "before" configuration for "sdw1" are created on "sdw5" with mode 755
     When the user runs "gprecoverseg -a -p sdw5 --hba-hostnames"
-    Then gprecoverseg should return a return code of 1
+    Then gprecoverseg should return a return code of 2
 #    And pg_hba file "/data/gpdata/mirror/gpseg0/pg_hba.conf" on host "sdw2" contains entries for "sdw5"
     And check if start failed for full recovery for mirrors with hostname sdw5
     And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
@@ -76,7 +76,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     And the cluster configuration is saved for "before_recoverseg"
     And datadirs from "before_recoverseg" configuration for "sdw1" are created on "sdw5" with mode 000
     When the user runs "gprecoverseg -a -p sdw5 --hba-hostnames"
-    Then gprecoverseg should return a return code of 1
+    Then gprecoverseg should return a return code of 2
 #    And pg_hba file "/data/gpdata/mirror/gpseg0/pg_hba.conf" on host "sdw2" contains entries for "sdw5"
     And check if moving the mirrors from sdw1 to sdw5 failed
     And gprecoverseg should print "Recovery Target instance port        = 20000" to stdout
