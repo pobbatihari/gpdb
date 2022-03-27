@@ -56,6 +56,7 @@ Feature: Tests for gpmovemirrors
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
 
+
     Scenario: tablespaces work
         Given a standard local demo cluster is created
           And a tablespace is created with data
@@ -102,49 +103,49 @@ Feature: Tests for gpmovemirrors
             add a validation error like both hosts recoverying to the same port - so that the triplet code fails
                 assert that gp_seg_config wasn't updated
         """
-
-    Scenario Outline: user can <correction> if <failed_count> mirrors failed to move initially
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And the information of contents 0,1,2 is saved
-        #TODO tablespace tests were failing intermittently why ?
-        And a tablespace is created with data
-        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
-        And a gpmovemirrors input file is created
-        And edit the input file to move mirror with content <successful_contents> to a new directory with mode 0700
-        And edit the input file to move mirror with content <failed_contents> to a new directory with mode 0000
-
-        When the user runs gpmovemirrors with input file and additional args " "
-        Then gpmovemirrors should return a return code of 3
-        And user can start transactions
-
-        And gpmovemirrors should print "Initiating segment recovery" to stdout
-        And gpmovemirrors should print "Failed to recover the following segments" to stdout
-        And gpmovemirrors should print "full" errors to stdout for content <failed_contents>
-        And gpmovemirrors should print "gprecoverseg failed. Please check the output" to stdout
-        And verify that mirror on content <successful_contents> is up
-        And verify that mirror on content <failed_contents> is down
-        And verify there are no recovery backout files
-        And check if mirrors on content <failed_contents> are in their original configuration
-        And check if mirrors on content <successful_contents> are moved to new location on input file
-        And verify there are no recovery backout files
-
-        And the tablespace is valid
-        Then the contents <failed_contents> should have their original data directory in the system configuration
-        And the gp_configuration_history table should contain a backout entry for the mirror segment for contents <failed_contents>
-
-        And the user executes steps required for <correction_steps>
-        And all the segments are running
-        And the segments are synchronized
-        And user can start transactions
-    Examples:
-        | correction                | failed_count | successful_contents | failed_contents | correction_steps                                     |
-        | rerun gpmovemirrors       | all          | None               | 0,1,2          | rerunning gpmovemirrors for contents 0,1,2             |
-        | rerun gpmovemirrors       | some         | 0,1                | 2              | rerunning gpmovemirrors for contents 2                 |
-        | run gprecoverseg          | some         | 0                  | 1,2            | running in place full recovery for all failed contents |
-        | run gprecoverseg          | all          | None               | 0,1,2          | running in place full recovery for all failed contents |
+ #   @WIP
+#    Scenario Outline: user can <correction> if <failed_count> mirrors failed to move initially
+#        Given the database is running
+#        And all the segments are running
+#        And the segments are synchronized
+#        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+#        And the information of contents 0,1,2 is saved
+#        #TODO tablespace tests were failing intermittently why ?
+#        And a tablespace is created with data
+#        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
+#        And a gpmovemirrors input file is created
+#        And edit the input file to move mirror with content <successful_contents> to a new directory with mode 0700
+#        And edit the input file to move mirror with content <failed_contents> to a new directory with mode 0000
+#
+#        When the user runs gpmovemirrors with input file and additional args " "
+#        Then gpmovemirrors should return a return code of 3
+#        And user can start transactions
+#
+#        #And gpmovemirrors should print "exists but does not have valid permissions" to stdout
+#        And gpmovemirrors should print "Failed to setup recovery for the following segments" to stdout
+#        And gpmovemirrors should print "full" errors to stdout for content <failed_contents>
+#        And gpmovemirrors should print "gprecoverseg failed. Please check the output" to stdout
+#        And verify that mirror on content <successful_contents> is up
+#        And verify that mirror on content <failed_contents> is down
+#        And verify there are no recovery backout files
+#        And check if mirrors on content <failed_contents> are in their original configuration
+#        And check if mirrors on content <successful_contents> are moved to new location on input file
+#        And verify there are no recovery backout files
+#
+#        And the tablespace is valid
+#        Then the contents <failed_contents> should have their original data directory in the system configuration
+#        And the gp_configuration_history table should contain a backout entry for the mirror segment for contents <failed_contents>
+#
+#        And the user executes steps required for <correction_steps>
+#        And all the segments are running
+#        And the segments are synchronized
+#        And user can start transactions
+#    Examples:
+#        | correction                | failed_count | successful_contents | failed_contents | correction_steps                                     |
+#        | rerun gpmovemirrors       | all          | None               | 0,1,2          | rerunning gpmovemirrors for contents 0,1,2             |
+#        | rerun gpmovemirrors       | some         | 0,1                | 2              | rerunning gpmovemirrors for contents 2                 |
+#        | run gprecoverseg          | some         | 0                  | 1,2            | running in place full recovery for all failed contents |
+#        | run gprecoverseg          | all          | None               | 0,1,2          | running in place full recovery for all failed contents |
 
     Scenario: gpmovemirrors can move mirrors even if start fails for some mirrors
         Given the database is running
