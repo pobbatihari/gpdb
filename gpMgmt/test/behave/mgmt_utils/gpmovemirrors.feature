@@ -328,39 +328,39 @@ Feature: Tests for gpmovemirrors
          Then the tablespace is valid
           And the cluster is recovered in full and rebalanced
 
-    @concourse_cluster
-    Scenario: gpmovemirrors mirrors come up even if one pg_ctl_start fails
-        Given the database is running
-        And verify that mirror segments are in "spread" configuration
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And the information of contents 0,1,2 is saved
-
-        And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-        And the "test_movemirrors" table row count in "postgres" is saved
-
-        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
-        And a gpmovemirrors input file is created
-        And edit the input file to recover mirror with content 0 to a new directory on remote host with mode 0755
-        And edit the input file to recover mirror with content 1 to a new directory on remote host with mode 0700
-        And edit the input file to recover mirror with content 2 to a new directory on remote host with mode 0700
-
-        When the user runs gpmovemirrors
-        Then check if start failed for contents 0 during full recovery for gpmovemirrors
-        And check if full recovery was successful for mirrors with content 1,2
-        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for mirrors with content 0,1,2
-        And gprecoverseg should print "Initiating segment recovery." to stdout
-
-        And check if mirrors on content 0,1,2 are moved to new location on input file
-        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
-        And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
-        And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
-        And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
-
-        And the mode of all the created data directories is changed to 0700
-        And the cluster is recovered in full and rebalanced
-        And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
+ #   @concourse_cluster
+#    Scenario: gpmovemirrors mirrors come up even if one pg_ctl_start fails
+#        Given the database is running
+#        And verify that mirror segments are in "spread" configuration
+#        And all the segments are running
+#        And the segments are synchronized
+#        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+#        And the information of contents 0,1,2 is saved
+#
+#        And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+#        And the "test_movemirrors" table row count in "postgres" is saved
+#
+#        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
+#        And a gpmovemirrors input file is created
+#        And edit the input file to recover mirror with content 0 to a new directory on remote host with mode 0755
+#        And edit the input file to recover mirror with content 1 to a new directory on remote host with mode 0700
+#        And edit the input file to recover mirror with content 2 to a new directory on remote host with mode 0700
+#
+#        When the user runs gpmovemirrors
+#        Then check if start failed for contents 0 during full recovery for gpmovemirrors
+#        And check if full recovery was successful for mirrors with content 1,2
+#        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for mirrors with content 0,1,2
+#        And gprecoverseg should print "Initiating segment recovery." to stdout
+#
+#        And check if mirrors on content 0,1,2 are moved to new location on input file
+#        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
+#        And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
+#        And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
+#        And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+#
+#        And the mode of all the created data directories is changed to 0700
+#        And the cluster is recovered in full and rebalanced
+#        And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
 
     @concourse_cluster
     Scenario: gpmovemirrors mirrors come up even if one basebackup fails
