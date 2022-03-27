@@ -147,38 +147,38 @@ Feature: Tests for gpmovemirrors
 #        | run gprecoverseg          | some         | 0                  | 1,2            | running in place full recovery for all failed contents |
 #        | run gprecoverseg          | all          | None               | 0,1,2          | running in place full recovery for all failed contents |
 
-    Scenario: gpmovemirrors can move mirrors even if start fails for some mirrors
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
-        And a gpmovemirrors input file is created
-        And edit the input file to move mirror with content 0 to a new directory with mode 0700
-        And edit the input file to move mirror with content 1 to a new directory with mode 0700
-        And edit the input file to move mirror with content 2 to a new directory with mode 0755
-
-        When the user runs gpmovemirrors with input file and additional args " "
-        Then gpmovemirrors should return a return code of 3
-        And user can start transactions
-
-        And gpmovemirrors should print "Initiating segment recovery" to stdout
-        And gpmovemirrors should not print "Segments successfully recovered" to stdout
-        And gpaddmirrors should print "Failed to start the following segments" to stdout
-        And gpmovemirrors should print "gprecoverseg failed" to stdout
-        And gpmovemirrors should print "start" errors to stdout for content 2
-        And verify that mirror on content 0,1 is up
-        And verify that mirror on content 2 is down
-        Then gprecoverseg should print "pg_basebackup: base backup completed" to stdout for mirrors with content 0,1,2
-        And check if mirrors on content 0,1,2 are moved to new location on input file
-
-
-        Given the mode of all the created data directories is changed to 0700
-        When the user runs "gprecoverseg -a"
-        And gprecoverseg should return a return code of 0
-        And all the segments are running
-        And the segments are synchronized
-        And user can start transactions
+#    Scenario: gpmovemirrors can move mirrors even if start fails for some mirrors
+#        Given the database is running
+#        And all the segments are running
+#        And the segments are synchronized
+#        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+#        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
+#        And a gpmovemirrors input file is created
+#        And edit the input file to move mirror with content 0 to a new directory with mode 0700
+#        And edit the input file to move mirror with content 1 to a new directory with mode 0700
+#        And edit the input file to move mirror with content 2 to a new directory with mode 0755
+#
+#        When the user runs gpmovemirrors with input file and additional args " "
+#        Then gpmovemirrors should return a return code of 3
+#        And user can start transactions
+#
+#        And gpmovemirrors should print "Initiating segment recovery" to stdout
+#        And gpmovemirrors should not print "Segments successfully recovered" to stdout
+#        And gpaddmirrors should print "Failed to start the following segments" to stdout
+#        And gpmovemirrors should print "gprecoverseg failed" to stdout
+#        And gpmovemirrors should print "start" errors to stdout for content 2
+#        And verify that mirror on content 0,1 is up
+#        And verify that mirror on content 2 is down
+#        Then gprecoverseg should print "pg_basebackup: base backup completed" to stdout for mirrors with content 0,1,2
+#        And check if mirrors on content 0,1,2 are moved to new location on input file
+#
+#
+#        Given the mode of all the created data directories is changed to 0700
+#        When the user runs "gprecoverseg -a"
+#        And gprecoverseg should return a return code of 0
+#        And all the segments are running
+#        And the segments are synchronized
+#        And user can start transactions
 
 
   @demo_cluster
