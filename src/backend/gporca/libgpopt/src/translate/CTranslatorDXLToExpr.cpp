@@ -161,17 +161,22 @@ CTranslatorDXLToExpr::CTranslatorDXLToExpr(CMemoryPool *mp,
 	  m_pmda(md_accessor),
 	  m_phmulcr(nullptr),
 	  m_phmululCTE(nullptr),
+	  m_colidToExprMap(NULL),
 	  m_pdrgpulOutputColRefs(nullptr),
 	  m_pdrgpmdname(nullptr),
 	  m_phmulpdxlnCTEProducer(nullptr),
 	  m_ulCTEId(gpos::ulong_max),
-	  m_pcf(nullptr)
+	  m_pcf(nullptr),
+	  m_translateScalarCmp(false),
+	  m_translateSetOp(false)
 {
 	// initialize hash tables
 	m_phmulcr = GPOS_NEW(m_mp) UlongToColRefMap(m_mp);
 
 	// initialize hash tables
 	m_phmululCTE = GPOS_NEW(m_mp) UlongToUlongMap(m_mp);
+
+	m_colidToExprMap = GPOS_NEW(m_mp) UlongToExprMap(m_mp);
 
 	if (fInitColumnFactory)
 	{
@@ -194,6 +199,7 @@ CTranslatorDXLToExpr::~CTranslatorDXLToExpr()
 {
 	m_phmulcr->Release();
 	m_phmululCTE->Release();
+	CRefCount::SafeRelease(m_colidToExprMap);
 	CRefCount::SafeRelease(m_pdrgpulOutputColRefs);
 	CRefCount::SafeRelease(m_pdrgpmdname);
 }
@@ -823,6 +829,8 @@ CTranslatorDXLToExpr::BuildSetOpChild(
 	GPOS_ASSERT(nullptr != ppdrgpexprChildProjElems);
 	GPOS_ASSERT(nullptr == *ppdrgpexprChildProjElems);
 
+	SetTranslateSetOp();
+
 	const CDXLLogicalSetOp *dxl_op =
 		CDXLLogicalSetOp::Cast(pdxlnSetOp->GetOperator());
 	const CDXLNode *child_dxlnode = (*pdxlnSetOp)[child_index];
@@ -913,6 +921,7 @@ CTranslatorDXLToExpr::BuildSetOpChild(
 			(*ppdrgpexprChildProjElems)->Append(pexprChildProjElem);
 		}
 	}
+	UnsetTranslateSetOp();
 }
 
 
@@ -2853,9 +2862,13 @@ CTranslatorDXLToExpr::PexprScalarCmp(const CDXLNode *pdxlnCmp)
 	CDXLNode *dxlnode_left = (*pdxlnCmp)[0];
 	CDXLNode *dxlnode_right = (*pdxlnCmp)[1];
 
+	SetTranslateScalarCmp();
+
 	// translate left and right children
 	CExpression *pexprLeft = Pexpr(dxlnode_left);
 	CExpression *pexprRight = Pexpr(dxlnode_right);
+
+	UnsetTranslateScalarCmp();
 
 	IMDId *mdid = pdxlopComp->MDId();
 	mdid->AddRef();
@@ -3387,6 +3400,23 @@ CTranslatorDXLToExpr::PexprScalarIdent(const CDXLNode *pdxlnIdent)
 
 	// get its column reference from the hash map
 	const CColRef *colref = LookupColRef(m_phmulcr, colid);
+
+	const ULONG colref_colid = colref->Id();
+
+	CExpression *pexprProj = m_colidToExprMap->Find(&colref_colid);
+
+	if (pexprProj != NULL && IsSetScalarcmp())
+	{
+		CExpression *projchild = (*pexprProj)[0];
+		// we wan't this limited to replace ScalarIdent with corresponding project elem
+		// only for in case of simple filters like " where col = 10". We don't want this
+		// happening in case of having clause and subqueries
+		if (projchild->Pop()->Eopid() == COperator::EopScalarIdent ||
+			projchild->Pop()->Eopid() == COperator::EopScalarIf ||
+			projchild->Pop()->Eopid() == COperator::EopScalarFunc ||
+			projchild->Pop()->Eopid() == COperator::EopScalarCast)
+			return projchild;
+	}
 	CExpression *pexpr = GPOS_NEW(m_mp)
 		CExpression(m_mp, GPOS_NEW(m_mp) CScalarIdent(m_mp, colref));
 
@@ -3879,6 +3909,18 @@ CTranslatorDXLToExpr::PexprScalarProjElem(const CDXLNode *pdxlnPrEl)
 
 	CExpression *pexprProjElem = GPOS_NEW(m_mp) CExpression(
 		m_mp, GPOS_NEW(m_mp) CScalarProjectElement(m_mp, colref), pexprChild);
+
+	// if we are inside a Set operation like Union or Intersect, we don't want to
+	// replace the ScalarIdent with Project Element.
+	// e.g.
+	// select * from (select a, a from orca.ur union select c, d from orca.us) x(g,h);
+	// The first Project element `a `is union of `a` and `c`. The second project element is
+	// union of a and d. But both come as Projection of `a`.
+	if (!IsSetOp())
+	{
+		m_colidToExprMap->Insert(GPOS_NEW(m_mp) ULONG(colref->Id()),
+								 pexprProjElem);
+	}
 	return pexprProjElem;
 }
 

@@ -85,6 +85,9 @@ private:
 	// mappings CTE Id (in DXL) -> CTE Id (in expr)
 	UlongToUlongMap *m_phmululCTE;
 
+	// mapping from colid to CExpression(pointing to project elem)
+	UlongToExprMap *m_colidToExprMap;
+
 	// array of output ColRefId
 	ULongPtrArray *m_pdrgpulOutputColRefs;
 
@@ -99,6 +102,9 @@ private:
 
 	// a copy of the pointer to column factory, obtained at construction time
 	CColumnFactory *m_pcf;
+
+	BOOL m_translateScalarCmp;
+	BOOL m_translateSetOp;
 
 	// private copy ctor
 	CTranslatorDXLToExpr(const CTranslatorDXLToExpr &);
@@ -397,6 +403,43 @@ public:
 	{
 		GPOS_ASSERT(nullptr != m_pdrgpmdname);
 		return m_pdrgpmdname;
+	}
+
+	void
+	SetTranslateScalarCmp()
+	{
+		m_translateScalarCmp = true;
+	}
+
+	void
+	UnsetTranslateScalarCmp()
+	{
+		m_translateScalarCmp = false;
+	}
+	void
+	SetTranslateSetOp()
+	{
+		m_translateSetOp = true;
+	}
+
+	void
+	UnsetTranslateSetOp()
+	{
+		m_translateSetOp = false;
+	}
+	BOOL
+	IsSetOp()
+	{
+		if (!m_translateSetOp)
+			return false;
+		return true;
+	}
+	BOOL
+	IsSetScalarcmp()
+	{
+		if (!m_translateScalarCmp)
+			return false;
+		return true;
 	}
 };
 }  // namespace gpopt
