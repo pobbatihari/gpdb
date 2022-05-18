@@ -12,10 +12,14 @@
 
 #include "gpopt/operators/CExpressionPreprocessor.h"
 
+#include <functional>
+#include <unordered_map>
+
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CAutoTimer.h"
 
+#include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
@@ -31,6 +35,7 @@
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
+#include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
@@ -2704,6 +2709,144 @@ CExpressionPreprocessor::PcnstrFromChildPartition(
 	return cnstr;
 }
 
+// Given a project element, return the casted colref if one exists, otherwise return NULL
+const CColRef *
+IsSingleColumnProjectElementWithCast(CExpression *pexpr)
+{
+	GPOS_ASSERT(pexpr->Pop()->Eopid() == COperator::EopScalarProjectElement);
+
+	int colCount = 0;
+
+	std::function<const CColRef *(CExpression *)> hasSingleColumnCast =
+		[&](CExpression *_pexpr) -> const CColRef * {
+		if (_pexpr->Pop()->Eopid() == COperator::EopScalarCast)
+		{
+			colCount += 1;
+			return CCastUtils::PcrExtractFromScIdOrCastScId(_pexpr);
+		}
+
+		if (_pexpr->Pop()->Eopid() == COperator::EopScalarIdent)
+		{
+			colCount += 1;
+		}
+
+		const ULONG arity = _pexpr->Arity();
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			CExpression *pexprChild = (*_pexpr)[ul];
+			const CColRef *pcolref = hasSingleColumnCast(pexprChild);
+			if (pcolref != nullptr)
+			{
+				return pcolref;
+			}
+		}
+		return nullptr;
+	};
+
+	const CColRef *result = hasSingleColumnCast(pexpr);
+	return colCount == 1 ? result : nullptr;
+}
+
+CExpression *
+PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
+					 std::unordered_map<const CColRef *, CExpression *> &m)
+{
+	/*
++--CLogicalSelect
+   |--CLogicalProject
+   |  |--CLogicalNAryJoin
+   |  |  |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), ...
+   |  |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), ...
+   |  |  +--CScalarCmp (=)
+   |  |     |--CScalarIdent "a" (0)
+   |  |     +--CScalarIdent "c" (9)
+   |  +--CScalarProjectList
+   |     +--CScalarProjectElement "b" (18)
+   |        +--CScalarFunc (varchar)
+   |           |--CScalarCast
+   |           |  +--CScalarIdent "b" (1)
+   |           |--CScalarConst (104)
+   |           +--CScalarConst (1)
+   +--CScalarCmp (=)
+      |--CScalarCast
+      |  +--CScalarIdent "b" (18)
+      +--CScalarConst (1828233457.000)
+  */
+	// protect against stack overflow during recursion
+	GPOS_CHECK_STACK_SIZE;
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
+
+	if (pexpr->Pop()->Eopid() == COperator::EopLogicalProject &&
+		(*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalGet)
+	{
+		CExpression *pexprProjectList = (*pexpr)[1];
+		const ULONG arity = pexprProjectList->Arity();
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			const CColRef *pcolref =
+				IsSingleColumnProjectElementWithCast((*pexprProjectList)[ul]);
+			if (pcolref != nullptr)
+			{
+				m[pcolref] = (*pexprProjectList)[ul];
+			}
+		}
+
+		// For now just handle simple case... Add more complex if we need later.
+		if (arity == 1 && m.size() == 1)
+		{
+			return PexprPushDownCompute(mp, (*pexpr)[0], m);
+		}
+		pexpr->AddRef();
+		return pexpr;
+	}
+
+	// recursively process children
+	const ULONG arity = pexpr->Arity();
+	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		if ((*pexpr)[ul]->Pop()->Eopid() == COperator::EopLogicalGet)
+		{
+			CExpression *pexprLogicalGet = (*pexpr)[ul];
+			bool found = false;
+
+			for (const auto &kv : m)
+			{
+				CColRefArray *pdrgpcrOutput =
+					CLogicalGet::PopConvert(pexprLogicalGet->Pop())
+						->PdrgpcrOutput();
+
+				for (ULONG _ul = 0; _ul < pdrgpcrOutput->Size(); _ul++)
+				{
+					if (CColRef::Equals((*pdrgpcrOutput)[_ul], kv.first))
+					{
+						CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
+							mp, GPOS_NEW(mp) CScalarProjectList(mp), kv.second);
+						CExpression *pexprNew = GPOS_NEW(mp)
+							CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
+										pexprLogicalGet, pexprPrjList);
+
+						pdrgpexprChildren->Append(pexprNew);
+						found = true;
+						break;
+					}
+				}
+			}
+
+			if (found)
+				continue;
+		}
+
+		CExpression *pexprChild = PexprPushDownCompute(mp, (*pexpr)[ul], m);
+		pdrgpexprChildren->Append(pexprChild);
+	}
+
+	COperator *pop = pexpr->Pop();
+	pop->AddRef();
+	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+}
+
 // main driver, pre-processing of input logical expression
 CExpression *
 CExpressionPreprocessor::PexprPreprocess(
@@ -2718,9 +2861,14 @@ CExpressionPreprocessor::PexprPreprocess(
 	CAutoTimer at("\n[OPT]: Expression Preprocessing Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
 
+	std::unordered_map<const CColRef *, CExpression *> m;
+	CExpression *pexprPushedDownProjects = PexprPushDownCompute(mp, pexpr, m);
+
 	// (1) remove unused CTE anchors
-	CExpression *pexprNoUnusedCTEs = PexprRemoveUnusedCTEs(mp, pexpr);
+	CExpression *pexprNoUnusedCTEs =
+		PexprRemoveUnusedCTEs(mp, pexprPushedDownProjects);
 	GPOS_CHECK_ABORT;
+	pexprPushedDownProjects->Release();
 
 	// (2.a) remove intermediate superfluous limit
 	CExpression *pexprSimplifiedLimit =
