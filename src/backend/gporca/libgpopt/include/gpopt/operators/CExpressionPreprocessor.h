@@ -35,6 +35,12 @@ using namespace gpos;
 class CExpressionPreprocessor
 {
 private:
+
+    // map colref to expressionArray for project elements
+    using ColRefToExpArrayMap =
+    CHashMap<CColRef, CExpressionArray, CColRef::HashValue, CColRef::Equals,
+            CleanupNULL<CColRef>, CleanupNULL>;
+
 	// map CTE id to collected predicates
 	using CTEPredsMap =
 		CHashMap<ULONG, CExpressionArray, gpos::HashValue<ULONG>,

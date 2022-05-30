@@ -69,6 +69,10 @@ using namespace gpopt;
 // maximum number of equality predicates to be derived from existing equalities
 #define GPOPT_MAX_DERIVED_PREDS 50
 
+typedef  CHashMap<CColRef, CExpressionArray, CColRef::HashValue, CColRef::Equals,
+        CleanupNULL<CColRef>, CleanupNULL>
+        ColRefToExpArrayMap;
+
 // eliminate self comparisons in the given expression
 CExpression *
 CExpressionPreprocessor::PexprEliminateSelfComparison(CMemoryPool *mp,
@@ -2749,7 +2753,7 @@ IsSingleColumnProjectElementWithCast(CExpression *pexpr)
 
 CExpression *
 PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
-					 std::unordered_multimap<const CColRef *, CExpression *> &m)
+                     ColRefToExpArrayMap *peam)
 {
 	/*
 +--CLogicalSelect
@@ -2786,17 +2790,31 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
 		{
 			const CColRef *pcolref =
 				IsSingleColumnProjectElementWithCast((*pexprProjectList)[ul]);
-			if (pcolref != nullptr)
-			{
-                m.insert(   {pcolref, (*pexprProjectList)[ul] } );
-			}
+            if (nullptr == pcolref)
+            {
+                continue;
+            }
+            const CExpressionArray *pdrgpexpr =
+                    peam->Find(pcolref);
+            if (nullptr == pdrgpexpr)
+            {
+                CExpressionArray *pdrgpexprNew =
+                        GPOS_NEW(mp) CExpressionArray(mp);
+                pdrgpexprNew->Append((*pexprProjectList)[ul]);
+                BOOL fInsert GPOS_ASSERTS_ONLY = peam->Insert(
+                        const_cast<CColRef *>(pcolref), pdrgpexprNew);
+                GPOS_ASSERT(fInsert);
+            }
+            else
+            {
+                const_cast<CExpressionArray *>(pdrgpexpr)->Append(
+                        (*pexprProjectList)[ul]);
+            }
+
 		}
-//        if (arity == 1)
-//        {
-//            return PexprPushDownCompute(mp, (*pexpr)[0], m);
-//        }
+
         pexpr->AddRef();
-        return PexprPushDownCompute(mp, (*pexpr)[0], m);
+        return PexprPushDownCompute(mp, (*pexpr)[0], peam);
 	}
 
 	// recursively process children
@@ -2815,17 +2833,12 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
 
 				for (ULONG _ul = 0; _ul < pdrgpcrOutput->Size(); _ul++)
 				{
-                    if (m.count((*pdrgpcrOutput)[_ul]) != 0)
+                    CExpressionArray *pdrgpexpr =
+                            peam->Find((*pdrgpcrOutput)[_ul]);
+                    if ( (nullptr != pdrgpexpr))
                     {
-
-                        auto itr = m.equal_range((*pdrgpcrOutput)[_ul]);
-                        CExpressionArray *pdrgpexprChild = GPOS_NEW(mp) CExpressionArray(mp);
-
-                        for (auto it = itr.first; it != itr.second; it++) {
-                            pdrgpexprChild->Append(it->second);
-                        }
                         CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
-                                mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpexprChild);
+                                mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpexpr);
 
                         CExpression *pexprNew = GPOS_NEW(mp)
                                 CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
@@ -2839,7 +2852,7 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
 				continue;
 		}
 
-		CExpression *pexprChild = PexprPushDownCompute(mp, (*pexpr)[ul], m);
+		CExpression *pexprChild = PexprPushDownCompute(mp, (*pexpr)[ul], peam);
 		pdrgpexprChildren->Append(pexprChild);
 	}
 
@@ -2862,9 +2875,12 @@ CExpressionPreprocessor::PexprPreprocess(
 	CAutoTimer at("\n[OPT]: Expression Preprocessing Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
 
-	std::unordered_multimap<const CColRef *, CExpression *> m;
-	CExpression *pexprPushedDownProjects = PexprPushDownCompute(mp, pexpr, m);
-
+    ColRefToExpArrayMap *peam =
+            GPOS_NEW(mp) ColRefToExpArrayMap(mp);
+//std::unordered_multimap<const CColRef *, CExpression *> m;
+	CExpression *pexprPushedDownProjects = PexprPushDownCompute(mp, pexpr, peam);
+    peam->Release();
+    pexpr->Release();
 	// (1) remove unused CTE anchors
 	CExpression *pexprNoUnusedCTEs =
 		PexprRemoveUnusedCTEs(mp, pexprPushedDownProjects);
