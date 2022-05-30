@@ -2749,7 +2749,7 @@ IsSingleColumnProjectElementWithCast(CExpression *pexpr)
 
 CExpression *
 PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
-					 std::unordered_map<const CColRef *, CExpression *> &m)
+					 std::unordered_multimap<const CColRef *, CExpression *> &m)
 {
 	/*
 +--CLogicalSelect
@@ -2788,17 +2788,15 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
 				IsSingleColumnProjectElementWithCast((*pexprProjectList)[ul]);
 			if (pcolref != nullptr)
 			{
-				m[pcolref] = (*pexprProjectList)[ul];
+                m.insert(   {pcolref, (*pexprProjectList)[ul] } );
 			}
 		}
-
-		// For now just handle simple case... Add more complex if we need later.
-		if (arity == 1 && m.size() == 1)
-		{
-			return PexprPushDownCompute(mp, (*pexpr)[0], m);
-		}
-		pexpr->AddRef();
-		return pexpr;
+//        if (arity == 1)
+//        {
+//            return PexprPushDownCompute(mp, (*pexpr)[0], m);
+//        }
+        pexpr->AddRef();
+        return PexprPushDownCompute(mp, (*pexpr)[0], m);
 	}
 
 	// recursively process children
@@ -2811,28 +2809,31 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
 			CExpression *pexprLogicalGet = (*pexpr)[ul];
 			bool found = false;
 
-			for (const auto &kv : m)
-			{
-				CColRefArray *pdrgpcrOutput =
-					CLogicalGet::PopConvert(pexprLogicalGet->Pop())
-						->PdrgpcrOutput();
+            CColRefArray *pdrgpcrOutput =
+                    CLogicalGet::PopConvert(pexprLogicalGet->Pop())
+                            ->PdrgpcrOutput();
 
 				for (ULONG _ul = 0; _ul < pdrgpcrOutput->Size(); _ul++)
 				{
-					if (CColRef::Equals((*pdrgpcrOutput)[_ul], kv.first))
-					{
-						CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
-							mp, GPOS_NEW(mp) CScalarProjectList(mp), kv.second);
-						CExpression *pexprNew = GPOS_NEW(mp)
-							CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
-										pexprLogicalGet, pexprPrjList);
+                    if (m.count((*pdrgpcrOutput)[_ul]) != 0)
+                    {
 
-						pdrgpexprChildren->Append(pexprNew);
-						found = true;
-						break;
-					}
-				}
-			}
+                        auto itr = m.equal_range((*pdrgpcrOutput)[_ul]);
+                        CExpressionArray *pdrgpexprChild = GPOS_NEW(mp) CExpressionArray(mp);
+
+                        for (auto it = itr.first; it != itr.second; it++) {
+                            pdrgpexprChild->Append(it->second);
+                        }
+                        CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
+                                mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpexprChild);
+
+                        CExpression *pexprNew = GPOS_NEW(mp)
+                                CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
+                                            pexprLogicalGet, pexprPrjList);
+                        pdrgpexprChildren->Append(pexprNew);
+                        found = true;
+                    }
+		    	}
 
 			if (found)
 				continue;
@@ -2861,7 +2862,7 @@ CExpressionPreprocessor::PexprPreprocess(
 	CAutoTimer at("\n[OPT]: Expression Preprocessing Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
 
-	std::unordered_map<const CColRef *, CExpression *> m;
+	std::unordered_multimap<const CColRef *, CExpression *> m;
 	CExpression *pexprPushedDownProjects = PexprPushDownCompute(mp, pexpr, m);
 
 	// (1) remove unused CTE anchors
