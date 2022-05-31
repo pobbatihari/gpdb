@@ -2842,18 +2842,14 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
                             peam->Find((*pdrgpcrOutput)[_ul]);
                     if ( (nullptr != pdrgpexpr))
                     {
-                        for (ULONG i = 0; i < pdrgpexpr->Size(); i++ )
-                        {
-                            CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
-                                    mp, GPOS_NEW(mp) CScalarProjectList(mp), (*pdrgpexpr)[i]);
+                        CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
+                                mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpexpr);
 
-                            CExpression *pexprNew = GPOS_NEW(mp)
-                                    CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
-                                                pexprLogicalGet, pexprPrjList);
-                            pdrgpexprChildren->Append(pexprNew);
-                            found = true;
-                        }
-
+                        CExpression *pexprNew = GPOS_NEW(mp)
+                                CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
+                                            pexprLogicalGet, pexprPrjList);
+                        pdrgpexprChildren->Append(pexprNew);
+                        found = true;
                     }
 		    	}
 
