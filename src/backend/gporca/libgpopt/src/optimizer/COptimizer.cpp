@@ -299,7 +299,7 @@ COptimizer::PdxlnOptimize(
 										   pdrgpmdname, true /*fDeriveStats*/);
 			GPOS_CHECK_ABORT;
 
-//			PrintQueryOrPlan(mp, pexprTranslated, pqc);
+			PrintQueryOrPlan(mp, pexprTranslated, pqc);
 
 			CWStringDynamic strTrace(mp);
 			COstreamString oss(&strTrace);

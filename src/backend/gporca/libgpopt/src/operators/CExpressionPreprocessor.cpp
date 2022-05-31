@@ -2885,7 +2885,10 @@ CExpressionPreprocessor::PexprPreprocess(
 //std::unordered_multimap<const CColRef *, CExpression *> m;
 	CExpression *pexprPushedDownProjects = PexprPushDownCompute(mp, pexpr, peam);
     peam->Release();
-    pexpr->Release();
+   // pexpr->Release();
+    GPOS_CHECK_ABORT;
+
+    //pexpr->Release();
 	// (1) remove unused CTE anchors
 	CExpression *pexprNoUnusedCTEs =
 		PexprRemoveUnusedCTEs(mp, pexprPushedDownProjects);
