@@ -2782,7 +2782,8 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
 	GPOS_ASSERT(nullptr != pexpr);
 
 	if (pexpr->Pop()->Eopid() == COperator::EopLogicalProject &&
-		(*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalGet)
+		(*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalGet &&
+            (*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalConstTableGet)
 	{
 		CExpression *pexprProjectList = (*pexpr)[1];
 		const ULONG arity = pexprProjectList->Arity();
@@ -2830,21 +2831,29 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
             CColRefArray *pdrgpcrOutput =
                     CLogicalGet::PopConvert(pexprLogicalGet->Pop())
                             ->PdrgpcrOutput();
-
+                // need to do some set operation
 				for (ULONG _ul = 0; _ul < pdrgpcrOutput->Size(); _ul++)
 				{
+                    if (peam->Size() == 0)
+                    {
+                        break;
+                    }
                     CExpressionArray *pdrgpexpr =
                             peam->Find((*pdrgpcrOutput)[_ul]);
                     if ( (nullptr != pdrgpexpr))
                     {
-                        CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
-                                mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpexpr);
+                        for (ULONG i = 0; i < pdrgpexpr->Size(); i++ )
+                        {
+                            CExpression *pexprPrjList = GPOS_NEW(mp) CExpression(
+                                    mp, GPOS_NEW(mp) CScalarProjectList(mp), (*pdrgpexpr)[i]);
 
-                        CExpression *pexprNew = GPOS_NEW(mp)
-                                CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
-                                            pexprLogicalGet, pexprPrjList);
-                        pdrgpexprChildren->Append(pexprNew);
-                        found = true;
+                            CExpression *pexprNew = GPOS_NEW(mp)
+                                    CExpression(mp, GPOS_NEW(mp) CLogicalProject(mp),
+                                                pexprLogicalGet, pexprPrjList);
+                            pdrgpexprChildren->Append(pexprNew);
+                            found = true;
+                        }
+
                     }
 		    	}
 
