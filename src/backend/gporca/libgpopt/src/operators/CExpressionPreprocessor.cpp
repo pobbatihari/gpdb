@@ -2893,7 +2893,7 @@ CExpressionPreprocessor::PexprPreprocess(
 	CExpression *pexprNoUnusedCTEs =
 		PexprRemoveUnusedCTEs(mp, pexprPushedDownProjects);
 	GPOS_CHECK_ABORT;
-	pexprPushedDownProjects->Release();
+//	pexprPushedDownProjects->Release();
 
 	// (2.a) remove intermediate superfluous limit
 	CExpression *pexprSimplifiedLimit =
