@@ -2783,7 +2783,9 @@ PexprPushDownCompute(CMemoryPool *mp, CExpression *pexpr,
 
 	if (pexpr->Pop()->Eopid() == COperator::EopLogicalProject &&
 		(*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalGet &&
-            (*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalConstTableGet)
+            (*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalConstTableGet &&
+            (*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalGbAgg  &&
+            (*pexpr)[0]->Pop()->Eopid() != COperator::EopLogicalTVF)
 	{
 		CExpression *pexprProjectList = (*pexpr)[1];
 		const ULONG arity = pexprProjectList->Arity();
