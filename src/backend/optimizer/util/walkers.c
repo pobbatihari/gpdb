@@ -866,6 +866,12 @@ check_collation_in_list(List *colllist, check_collation_context *context)
 }
 
 static bool
+isValidCollation(Oid collation) {
+    return (InvalidOid != collation && DEFAULT_COLLATION_OID != collation
+            && C_COLLATION_OID != collation && POSIX_COLLATION_OID != collation);
+}
+
+static bool
 check_collation_walker(Node *node, check_collation_context *context)
 {
 	Oid collation, inputCollation, type;
@@ -938,8 +944,7 @@ check_collation_walker(Node *node, check_collation_context *context)
 		case T_DMLActionExpr:
 			collation = exprCollation(node);
 			inputCollation = exprInputCollation(node);
-			if ((InvalidOid != collation && DEFAULT_COLLATION_OID != collation) ||
-				(InvalidOid != inputCollation && DEFAULT_COLLATION_OID != inputCollation))
+			if (isValidCollation(collation) || isValidCollation(inputCollation))
 			{
 				context->foundNonDefaultCollation = 1;
 			}
