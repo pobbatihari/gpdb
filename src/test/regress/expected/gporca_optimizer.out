@@ -8147,9 +8147,9 @@ having exists (select 1 from orca.onek b where sum(distinct a.four) = b.four);
 -----+-----
    0 |   2
    1 |   3
-   9 |   3
    3 |   3
    4 |   2
+   9 |   3
 (5 rows)
 
 -- indexes on partitioned tables

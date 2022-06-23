@@ -1934,7 +1934,7 @@ select pg_get_viewdef('aggordview1');
 
 select * from aggordview1 order by ten;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+DETAIL:  Feature not supported: Aggregate functions with FILTER
  ten | p50 | px  | rank 
 -----+-----+-----+------
    0 | 490 |     |  101
