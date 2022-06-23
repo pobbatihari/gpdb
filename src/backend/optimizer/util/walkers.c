@@ -865,11 +865,11 @@ check_collation_in_list(List *colllist, check_collation_context *context)
 	}
 }
 
-static bool
-isValidCollation(Oid collation) {
-    return (InvalidOid != collation && DEFAULT_COLLATION_OID != collation
-            && C_COLLATION_OID != collation && POSIX_COLLATION_OID != collation);
-}
+//static bool
+//isValidCollation(Oid collation) {
+//    return (InvalidOid != collation && DEFAULT_COLLATION_OID != collation
+//            && C_COLLATION_OID != collation && POSIX_COLLATION_OID != collation);
+//}
 
 static bool
 check_collation_walker(Node *node, check_collation_context *context)
@@ -890,19 +890,33 @@ check_collation_walker(Node *node, check_collation_context *context)
 	switch (nodeTag(node))
 	{
 		case T_Var:
-			type = (castNode(Var, node))->vartype;
+            type = (castNode(Var , node))->vartype;
+            collation = exprCollation(node);
+            if (type == NAMEOID)
+            {
+                if (collation != C_COLLATION_OID)
+                    context->foundNonDefaultCollation = 1;
+            }
+            else if (InvalidOid != collation && DEFAULT_COLLATION_OID != collation)
+            {
+                context->foundNonDefaultCollation = 1;
+            }
+            break;
+
+        case T_Const:
+			type = (castNode(Const , node))->consttype;
 			collation = exprCollation(node);
 			if (type == NAMEOID)
 			{
 				if (collation != C_COLLATION_OID)
 					context->foundNonDefaultCollation = 1;
 			}
-			else if (isValidCollation(collation))
+			else if (InvalidOid != collation && DEFAULT_COLLATION_OID != collation)
 			{
 				context->foundNonDefaultCollation = 1;
 			}
 			break;
-		case T_Const:
+//		case T_Const:
 		case T_OpExpr:
 		case T_ScalarArrayOpExpr:
 		case T_DistinctExpr:
@@ -944,7 +958,8 @@ check_collation_walker(Node *node, check_collation_context *context)
 		case T_DMLActionExpr:
 			collation = exprCollation(node);
 			inputCollation = exprInputCollation(node);
-			if (isValidCollation(collation) || isValidCollation(inputCollation))
+            if ((InvalidOid != collation && DEFAULT_COLLATION_OID != collation) ||
+                (InvalidOid != inputCollation && DEFAULT_COLLATION_OID != inputCollation))
 			{
 				context->foundNonDefaultCollation = 1;
 			}
