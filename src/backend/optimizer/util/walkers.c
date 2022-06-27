@@ -890,7 +890,11 @@ check_collation_walker(Node *node, check_collation_context *context)
 	switch (nodeTag(node))
 	{
 		case T_Var:
-            type = (castNode(Var , node))->vartype;
+        case T_Const:
+        case T_OpExpr:
+
+//            type = (castNode(Var , node))->vartype;
+            type = exprType((node));
             collation = exprCollation(node);
             if (type == NAMEOID)
             {
@@ -902,22 +906,6 @@ check_collation_walker(Node *node, check_collation_context *context)
                 context->foundNonDefaultCollation = 1;
             }
             break;
-
-        case T_Const:
-			type = (castNode(Const , node))->consttype;
-			collation = exprCollation(node);
-			if (type == NAMEOID)
-			{
-				if (collation != C_COLLATION_OID)
-					context->foundNonDefaultCollation = 1;
-			}
-			else if (InvalidOid != collation && DEFAULT_COLLATION_OID != collation)
-			{
-				context->foundNonDefaultCollation = 1;
-			}
-			break;
-//		case T_Const:
-		case T_OpExpr:
 		case T_ScalarArrayOpExpr:
 		case T_DistinctExpr:
 		case T_BoolExpr:
