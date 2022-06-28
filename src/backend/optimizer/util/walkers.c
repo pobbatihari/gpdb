@@ -865,11 +865,6 @@ check_collation_in_list(List *colllist, check_collation_context *context)
 	}
 }
 
-//static bool
-//isValidCollation(Oid collation) {
-//    return (InvalidOid != collation && DEFAULT_COLLATION_OID != collation
-//            && C_COLLATION_OID != collation && POSIX_COLLATION_OID != collation);
-//}
 
 static bool
 check_collation_walker(Node *node, check_collation_context *context)
@@ -892,8 +887,6 @@ check_collation_walker(Node *node, check_collation_context *context)
 		case T_Var:
         case T_Const:
         case T_OpExpr:
-
-//            type = (castNode(Var , node))->vartype;
             type = exprType((node));
             collation = exprCollation(node);
             if (type == NAMEOID)
@@ -944,7 +937,7 @@ check_collation_walker(Node *node, check_collation_context *context)
 		case T_AlternativeSubPlan:
 		case T_GroupingFunc:
 		case T_DMLActionExpr:
-			collation = exprCollation(node);
+            collation = exprCollation(node);
 			inputCollation = exprInputCollation(node);
             if ((InvalidOid != collation && DEFAULT_COLLATION_OID != collation) ||
                 (InvalidOid != inputCollation && DEFAULT_COLLATION_OID != inputCollation))
