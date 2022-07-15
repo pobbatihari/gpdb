@@ -363,7 +363,7 @@ CdbDispatchCommand(const char *strCommand,
 }
 
 /*
- * Like CdbDispatchCommand, but sends the command only to the
+ * Like CdbDispatchCommand, but sends the command only to
  * specified segments.
  */
 void

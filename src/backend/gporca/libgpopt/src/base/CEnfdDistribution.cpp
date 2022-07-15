@@ -23,6 +23,7 @@
 #include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalMotionGather.h"
 #include "gpopt/operators/CPhysicalMotionHashDistribute.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
 
 
 using namespace gpopt;
@@ -153,6 +154,10 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		{
 			return CEnfdProp::EpetProhibited;
 		}
+
+        if (CDistributionSpec::EdtSingleton == pds->Edt() &&  !CDistributionSpecSingleton::PdssConvert(pds)->FAllowReplicated()){
+            return EpetProhibited;
+        }
 
 		// N.B.: subtlety ahead:
 		// We used to do the following check in CPhysicalMotion::FValidContext

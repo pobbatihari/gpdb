@@ -39,12 +39,17 @@ private:
 	// private copy ctor
 	CDistributionSpecNonSingleton(const CDistributionSpecNonSingleton &);
 
+    //
+    BOOL m_fallowEnforcers;
+
 public:
 	//ctor
 	CDistributionSpecNonSingleton();
 
 	//ctor
-	explicit CDistributionSpecNonSingleton(BOOL fAllowReplicated);
+	explicit CDistributionSpecNonSingleton(BOOL fAllowReplicated,BOOL fAllowEnforcers=true);
+
+
 
 	// should Replicated distribution satisfy current distribution
 	BOOL
@@ -52,6 +57,13 @@ public:
 	{
 		return m_fAllowReplicated;
 	}
+
+
+    BOOL
+    FAllowEnforcers() const
+    {
+        return m_fallowEnforcers;
+    }
 
 	// accessor
 	virtual EDistributionType
