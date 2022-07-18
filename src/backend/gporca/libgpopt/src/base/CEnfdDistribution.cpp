@@ -155,7 +155,7 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 			return CEnfdProp::EpetProhibited;
 		}
 
-        if (CDistributionSpec::EdtSingleton == pds->Edt() &&  !CDistributionSpecSingleton::PdssConvert(pds)->FAllowReplicated()){
+        if (CDistributionSpec::EdtNonSingleton == m_pds->Edt() &&  !CDistributionSpecNonSingleton::PdsConvert(m_pds)->FAllowEnforcers()){
             return EpetProhibited;
         }
 
