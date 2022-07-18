@@ -231,10 +231,9 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 		// no distribution requirement on first child
 
 
-        if (CDistributionSpec::EdtSingleton ==  pdsRequired->Edt())
-        {
-            CDistributionSpecSingleton *pdss =
-                    CDistributionSpecSingleton::PdssConvert(pdsRequired);
+		if (CDistributionSpec::EdtSingleton ==  pdsRequired->Edt())
+		{
+			CDistributionSpecSingleton *pdss = CDistributionSpecSingleton::PdssConvert(pdsRequired);
 			return GPOS_NEW(mp) CDistributionSpecSingleton(pdss->Est());
 		}
 		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
