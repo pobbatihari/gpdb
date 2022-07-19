@@ -15,6 +15,7 @@
 
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CPartIndexMap.h"
@@ -152,6 +153,14 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 			!ppimDrvd->FSubset(pppsReqd->Ppim()))
 		{
 			return CEnfdProp::EpetProhibited;
+		}
+
+		//If the child is non-singleton and enforcers flag is false, set the distribution type as prohibited
+		if ((CDistributionSpec::EdtNonSingleton == m_pds->Edt()) &&
+			(!CDistributionSpecNonSingleton::PdsConvert(m_pds)
+				  ->FAllowEnforcers()))
+		{
+			return EpetProhibited;
 		}
 
 		// N.B.: subtlety ahead:
