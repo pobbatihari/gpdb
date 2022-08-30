@@ -895,8 +895,12 @@ check_collation_walker(Node *node, check_collation_context *context)
 			{
 				if (collation != C_COLLATION_OID)
 					context->foundNonDefaultCollation = 1;
-			}
-			else if (InvalidOid != collation && DEFAULT_COLLATION_OID != collation)
+			} else if (type == TEXTARRAYOID) {
+                          if (collation != DEFAULT_COLLATION_OID &&
+                              collation != C_COLLATION_OID) {
+                            context->foundNonDefaultCollation = 1;
+                          }
+                        } else if (InvalidOid != collation && DEFAULT_COLLATION_OID != collation)
 			{
 				context->foundNonDefaultCollation = 1;
 			}

@@ -785,11 +785,7 @@ GROUP BY l.id
 ORDER BY l.id;
 
 -- Array types are GPDB hashable
--- start_ignore
--- GPDB_12_MERGE_FIXME: Add an explicit COLLATE clause to cause ORCA to 
--- fallback instead of adding an optimizer.out file. Re-visit and fix 
--- when the collation work for ORCA is picked up again.
--- end_ignore
+
 CREATE TEMP TABLE text_array_table (t text[]) DISTRIBUTED BY ( t );
 INSERT INTO text_array_table VALUES ('{foo}' COLLATE "C");
 
