@@ -169,10 +169,11 @@ explain (costs off) select * from coll_pruning where a collate "C" = 'a' collate
                  QUERY PLAN                  
 ---------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Seq Scan on coll_pruning_a
-         Filter: (a = 'a'::text COLLATE "C")
- Optimizer: Postgres query optimizer
-(4 rows)
+   ->  Dynamic Seq Scan on coll_pruning
+         Number of partitions to scan: 1 
+         Filter: (a = 'a'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 -- collation doesn't match the partitioning collation, no pruning occurs
 explain (costs off) select * from coll_pruning where a collate "POSIX" = 'a' collate "POSIX";

@@ -274,7 +274,7 @@ plan_tree_walker(Node *node,
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			break;
-			
+
 		case T_TableFunctionScan:
 			if (walker((Node *) ((TableFunctionScan *) node)->function, context))
 				return true;
@@ -736,7 +736,7 @@ List *extract_nodes_expression(Node *node, int nodeTag, bool descendIntoSubqueri
 	context.nodeTag = nodeTag;
 	context.descendIntoSubqueries = descendIntoSubqueries;
 	extract_nodes_expression_walker(node, &context);
-	
+
 	return context.nodes;
 }
 
@@ -747,12 +747,12 @@ extract_nodes_expression_walker(Node *node, extract_context *context)
 	{
 		return false;
 	}
-	
+
 	if (nodeTag(node) == context->nodeTag)
 	{
 		context->nodes = lappend(context->nodes, node);
 	}
-	
+
 	if (nodeTag(node) == T_Query && context->descendIntoSubqueries)
 	{
 		Query *query = (Query *) node;
@@ -896,7 +896,7 @@ check_collation_walker(Node *node, check_collation_context *context)
 				if (collation != C_COLLATION_OID)
 					context->foundNonDefaultCollation = 1;
 			}
-			else if (InvalidOid != collation && DEFAULT_COLLATION_OID != collation)
+			else if (InvalidOid != collation && DEFAULT_COLLATION_OID != collation && C_COLLATION_OID != collation)
 			{
 				context->foundNonDefaultCollation = 1;
 			}
