@@ -575,7 +575,7 @@ CREATE VIEW gstest_view AS select a, b, grouping(a,b), sum(c), count(*), max(c)
 NOTICE:  view "gstest_view" will be a temporary view
 select pg_get_viewdef('gstest_view'::regclass, true);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+DETAIL:  Feature not supported: Queries on master-only tables
                                 pg_get_viewdef                                 
 -------------------------------------------------------------------------------
   SELECT gstest2.a,                                                           +
