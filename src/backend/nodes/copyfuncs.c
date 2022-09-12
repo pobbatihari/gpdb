@@ -599,6 +599,7 @@ _copyDynamicSeqScan(const DynamicSeqScan *from)
 	COPY_NODE_FIELD(partOids);
 	COPY_NODE_FIELD(part_prune_info);
 	COPY_NODE_FIELD(join_prune_paramids);
+	COPY_SCALAR_FIELD(total_partitions);
 
 	return newnode;
 }

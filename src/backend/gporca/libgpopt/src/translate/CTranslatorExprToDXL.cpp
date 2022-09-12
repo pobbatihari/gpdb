@@ -1359,7 +1359,7 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	// construct dynamic table scan operator
 	IMdIdArray *part_mdids = popDTS->GetPartitionMdids();
 	part_mdids->AddRef();
-
+	ULONG total_partitions = popDTS->GetTotalPartitions();
 	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 	CPartitionPropagationSpec *pps_reqd =
 		pexprDTS->Prpp()->Pepp()->PppsRequired();
@@ -1375,8 +1375,8 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 
 
 	CDXLPhysicalDynamicTableScan *pdxlopDTS =
-		GPOS_NEW(m_mp) CDXLPhysicalDynamicTableScan(m_mp, table_descr,
-													part_mdids, selector_ids);
+		GPOS_NEW(m_mp) CDXLPhysicalDynamicTableScan(
+			m_mp, table_descr, part_mdids, selector_ids, total_partitions);
 
 	CDXLNode *pdxlnDTS = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopDTS);
 	pdxlnDTS->SetProperties(pdxlpropDTS);

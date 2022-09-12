@@ -2563,7 +2563,8 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			GPOS_NEW(mp) CConstraintArray(mp);
 
 		IMdIdArray *all_partition_mdids = dyn_get->GetPartitionMdids();
-		for (ULONG ul = 0; ul < all_partition_mdids->Size(); ++ul)
+		ULONG total_partitions = all_partition_mdids->Size();
+		for (ULONG ul = 0; ul < total_partitions; ++ul)
 		{
 			IMDId *part_mdid = (*all_partition_mdids)[ul];
 			const IMDRelation *partrel = mda->RetrieveRel(part_mdid);
@@ -2630,7 +2631,8 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		CLogicalDynamicGet *new_dyn_get = GPOS_NEW(mp) CLogicalDynamicGet(
 			mp, new_alias, dyn_get->Ptabdesc(), dyn_get->ScanId(),
 			dyn_get->PdrgpcrOutput(), dyn_get->PdrgpdrgpcrPart(),
-			selected_partition_mdids, selected_part_cnstr_disj, true);
+			selected_partition_mdids, selected_part_cnstr_disj, true,
+			total_partitions);
 
 		CExpressionArray *select_children = GPOS_NEW(mp) CExpressionArray(mp);
 		select_children->Append(GPOS_NEW(mp) CExpression(mp, new_dyn_get));

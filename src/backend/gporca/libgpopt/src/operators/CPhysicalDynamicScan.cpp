@@ -39,14 +39,14 @@ CPhysicalDynamicScan::CPhysicalDynamicScan(
 	CMemoryPool *mp, CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
 	const CName *pnameAlias, ULONG scan_id, CColRefArray *pdrgpcrOutput,
 	CColRef2dArray *pdrgpdrgpcrParts, IMdIdArray *partition_mdids,
-	ColRefToUlongMapArray *root_col_mapping_per_part)
+	ColRefToUlongMapArray *root_col_mapping_per_part, ULONG total_partitions)
 	: CPhysicalScan(mp, pnameAlias, ptabdesc, pdrgpcrOutput),
 	  m_ulOriginOpId(ulOriginOpId),
 	  m_scan_id(scan_id),
 	  m_pdrgpdrgpcrPart(pdrgpdrgpcrParts),
 	  m_partition_mdids(partition_mdids),
+	  m_total_partitions(total_partitions),
 	  m_root_col_mapping_per_part(root_col_mapping_per_part)
-
 {
 	GPOS_ASSERT(nullptr != pdrgpdrgpcrParts);
 	GPOS_ASSERT(0 < pdrgpdrgpcrParts->Size());

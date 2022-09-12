@@ -56,15 +56,16 @@ CLogicalDynamicGet::CLogicalDynamicGet(
 	CMemoryPool *mp, const CName *pnameAlias, CTableDescriptor *ptabdesc,
 	ULONG ulPartIndex, CColRefArray *pdrgpcrOutput,
 	CColRef2dArray *pdrgpdrgpcrPart, IMdIdArray *partition_mdids,
-	CConstraint *partition_cnstrs_disj, BOOL static_pruned)
+	CConstraint *partition_cnstrs_disj, BOOL static_pruned,
+	ULONG total_partitions)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
-							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids),
+							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
+							 total_partitions),
 	  m_partition_cnstrs_disj(partition_cnstrs_disj),
 	  m_static_pruned(static_pruned)
 {
 	GPOS_ASSERT(static_pruned || (nullptr == partition_cnstrs_disj));
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:

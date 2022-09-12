@@ -765,6 +765,7 @@ typedef struct DynamicSeqScan
 	 * partitions.
 	 */
 	List	   *join_prune_paramids;
+	unsigned int total_partitions;
 
 } DynamicSeqScan;
 

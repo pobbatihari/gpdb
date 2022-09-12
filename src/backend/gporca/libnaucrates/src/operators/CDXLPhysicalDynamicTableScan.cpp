@@ -31,16 +31,16 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CDXLPhysicalDynamicTableScan::CDXLPhysicalDynamicTableScan(
 	CMemoryPool *mp, CDXLTableDescr *table_descr, IMdIdArray *part_mdids,
-	ULongPtrArray *selector_ids)
+	ULongPtrArray *selector_ids, ULONG total_partitions)
 	: CDXLPhysical(mp),
 	  m_dxl_table_descr(table_descr),
 	  m_part_mdids(part_mdids),
-	  m_selector_ids(selector_ids)
+	  m_selector_ids(selector_ids),
+	  m_total_partitions(total_partitions)
 
 {
 	GPOS_ASSERT(nullptr != table_descr);
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -47,6 +47,7 @@ private:
 	IMdIdArray *m_part_mdids;
 
 	ULongPtrArray *m_selector_ids = nullptr;
+	ULONG m_total_partitions;
 
 public:
 	CDXLPhysicalDynamicTableScan(CDXLPhysicalDynamicTableScan &) = delete;
@@ -54,7 +55,8 @@ public:
 	// ctor
 	CDXLPhysicalDynamicTableScan(CMemoryPool *mp, CDXLTableDescr *table_descr,
 								 IMdIdArray *part_mdids,
-								 ULongPtrArray *selector_ids);
+								 ULongPtrArray *selector_ids,
+								 ULONG total_partitions = 0);
 
 	// dtor
 	~CDXLPhysicalDynamicTableScan() override;
@@ -75,6 +77,13 @@ public:
 	{
 		return m_selector_ids;
 	}
+
+	ULONG
+	GetTotalPartitions() const
+	{
+		return m_total_partitions;
+	}
+
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *xml_serializer,
 						const CDXLNode *node) const override;

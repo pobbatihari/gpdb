@@ -37,7 +37,8 @@ public:
 							  ULONG scan_id, CColRefArray *pdrgpcrOutput,
 							  CColRef2dArray *pdrgpdrgpcrParts,
 							  IMdIdArray *partition_mdids,
-							  ColRefToUlongMapArray *root_col_mapping_per_part);
+							  ColRefToUlongMapArray *root_col_mapping_per_part,
+							  ULONG total_partitions = 0);
 
 	// ident accessors
 	EOperatorId

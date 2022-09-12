@@ -52,6 +52,9 @@ private:
 	// child partitions
 	IMdIdArray *m_partition_mdids;
 
+	// total partitions
+	ULONG m_total_partitions;
+
 	// Map of Root colref -> col index in child tabledesc
 	// per child partition in m_partition_mdid
 	ColRefToUlongMapArray *m_root_col_mapping_per_part = nullptr;
@@ -65,7 +68,8 @@ public:
 						 ULONG scan_id, CColRefArray *pdrgpcrOutput,
 						 CColRef2dArray *pdrgpdrgpcrParts,
 						 IMdIdArray *partition_mdids,
-						 ColRefToUlongMapArray *root_col_mapping_per_part);
+						 ColRefToUlongMapArray *root_col_mapping_per_part,
+						 ULONG total_partitions = 0);
 
 	// dtor
 	~CPhysicalDynamicScan() override;
@@ -82,6 +86,12 @@ public:
 	ScanId() const
 	{
 		return m_scan_id;
+	}
+
+	ULONG
+	GetTotalPartitions() const
+	{
+		return m_total_partitions;
 	}
 
 	// partition keys

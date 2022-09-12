@@ -64,7 +64,7 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(CMemoryPool *mp)
 CLogicalDynamicGetBase::CLogicalDynamicGetBase(
 	CMemoryPool *mp, const CName *pnameAlias, CTableDescriptor *ptabdesc,
 	ULONG scan_id, CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
-	IMdIdArray *partition_mdids)
+	IMdIdArray *partition_mdids, ULONG total_partitions)
 	: CLogical(mp),
 	  m_pnameAlias(pnameAlias),
 	  m_ptabdesc(ptabdesc),
@@ -72,8 +72,8 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(
 	  m_pdrgpcrOutput(pdrgpcrOutput),
 	  m_pdrgpdrgpcrPart(pdrgpdrgpcrPart),
 	  m_pcrsDist(nullptr),
-	  m_partition_mdids(partition_mdids)
-
+	  m_partition_mdids(partition_mdids),
+	  m_total_partitions(total_partitions)
 {
 	GPOS_ASSERT(nullptr != ptabdesc);
 	GPOS_ASSERT(nullptr != pnameAlias);
@@ -84,7 +84,6 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(
 	m_root_col_mapping_per_part =
 		ConstructRootColMappingPerPart(mp, m_pdrgpcrOutput, m_partition_mdids);
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:

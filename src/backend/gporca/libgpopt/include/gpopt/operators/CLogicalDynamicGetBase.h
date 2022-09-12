@@ -61,6 +61,10 @@ protected:
 
 	// Child partitions
 	IMdIdArray *m_partition_mdids = nullptr;
+
+	// total paritions
+	ULONG m_total_partitions;
+
 	// Map of Root colref -> col index in child tabledesc
 	// per child partition in m_partition_mdid
 	ColRefToUlongMapArray *m_root_col_mapping_per_part = nullptr;
@@ -78,7 +82,8 @@ public:
 						   CTableDescriptor *ptabdesc, ULONG scan_id,
 						   CColRefArray *pdrgpcrOutput,
 						   CColRef2dArray *pdrgpdrgpcrPart,
-						   IMdIdArray *partition_mdids);
+						   IMdIdArray *partition_mdids,
+						   ULONG total_partitions = 0);
 
 	CLogicalDynamicGetBase(CMemoryPool *mp, const CName *pnameAlias,
 						   CTableDescriptor *ptabdesc, ULONG scan_id,
@@ -120,6 +125,13 @@ public:
 	ScanId() const
 	{
 		return m_scan_id;
+	}
+
+	// return total partitions
+	virtual ULONG
+	Total_partitions() const
+	{
+		return m_total_partitions;
 	}
 
 	// return the partition columns

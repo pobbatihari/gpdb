@@ -50,7 +50,8 @@ public:
 					   CColRefArray *pdrgpcrOutput,
 					   CColRef2dArray *pdrgpdrgpcrPart,
 					   IMdIdArray *partition_mdids,
-					   CConstraint *partition_cnstrs_disj, BOOL static_pruned);
+					   CConstraint *partition_cnstrs_disj, BOOL static_pruned,
+					   ULONG total_partitions = 0);
 
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
