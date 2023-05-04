@@ -959,7 +959,7 @@ SELECT t1.c FROM t1 LEFT OUTER JOIN (select t3.*, t3.a+t3.b as cc from t3)t ON t
 -- Test for unexpected NLJ qual
 --
 explain select 1 as mrs_t1 where 1 <= ALL (select x from z);
-                                                                                                                                                           QUERY PLAN
+                                                                                                                                                           QUERY PLAN                                                                                                                                                            
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..882688.11 rows=1 width=4)
    ->  Nested Loop  (cost=0.00..882688.11 rows=1 width=1)
@@ -3370,7 +3370,7 @@ INNER JOIN member_subgroup
 ON member_group.group_id = member_subgroup.group_id
 LEFT OUTER JOIN region
 ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = region.county_name);
-                                            QUERY PLAN
+                                            QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice5; segments: 3)
    ->  Hash Left Join
@@ -3410,7 +3410,6 @@ EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
          ->  Seq Scan on coercejoin
          ->  Hash
                ->  Seq Scan on coercejoin coercejoin_1
- Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 -- Negative test, the join should not be colocated since the cast is a coercion
@@ -3429,7 +3428,6 @@ EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: (coercejoin_1.a)::numeric
                      ->  Seq Scan on coercejoin coercejoin_1
- Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
 --
@@ -3590,7 +3588,7 @@ set enable_nestloop=on;
 -- Motion node from rescanning! That Materialize node is rescanned, when the
 -- executor parameter 'b.i' changes.
 explain (costs off) select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
-                       QUERY PLAN
+                       QUERY PLAN                        
 ---------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Nested Loop
@@ -3710,7 +3708,7 @@ EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0';
 -- datatype is compatible with the distribution key, the other's is not. We can
 -- redistribute based on the compatible constant.
 EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0' AND b = float4 '3.0';
-                                             QUERY PLAN
+                                             QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=2.21..5.49 rows=5 width=8)
    ->  Hash Join  (cost=2.21..5.39 rows=2 width=8)
@@ -3751,7 +3749,7 @@ set enable_seqscan = off;
 set enable_bitmapscan = off;
 analyze t_9427;
 explain (costs off) select * from t_9427 where a in (select a from t_9427 where c < 100 ) and a < 200;
-                                                                  QUERY PLAN
+                                                                  QUERY PLAN                                                                   
 -----------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Merge Join
@@ -3885,7 +3883,7 @@ select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from
 (20 rows)
 
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
-                                            QUERY PLAN
+                                            QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.01 rows=44 width=24)
    ->  Hash Left Join  (cost=0.00..1293.01 rows=15 width=24)
@@ -3902,7 +3900,7 @@ explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not disti
 (12 rows)
 
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
-                                            QUERY PLAN
+                                            QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.01 rows=40 width=24)
    ->  Hash Left Join  (cost=0.00..1293.01 rows=14 width=24)
@@ -3920,7 +3918,7 @@ explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not disti
 (13 rows)
 
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
-                                            QUERY PLAN
+                                            QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.01 rows=40 width=24)
    ->  Hash Left Join  (cost=0.00..1293.01 rows=14 width=24)
@@ -3983,7 +3981,7 @@ insert into baz values ('cd  '); -- 2 trailing spaces
 -- varchar cast to bpchar
 -- 'cd' matches 'cd', returns 1 row
 explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
-                                        QUERY PLAN
+                                        QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
  Hash Join  (cost=0.00..862.00 rows=1 width=7)
    Hash Cond: (bar.char_3 = (foo.varchar_3)::bpchar)
@@ -4004,7 +4002,7 @@ select varchar_3, char_3 from foo join bar on varchar_3=char_3;
 -- char cast to text
 -- 'cd' doesn't match 'cd  ', returns 0 rows
 explain select char_3, text_any from bar join baz on char_3=text_any;
-                                        QUERY PLAN
+                                        QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
  Hash Join  (cost=0.00..862.00 rows=1 width=9)
    Hash Cond: (baz.text_any = (bar.char_3)::text)
@@ -4029,7 +4027,7 @@ select char_3, text_any from bar join baz on char_3=text_any;
 -- Notice ORCA changes join order to minimize motion
 explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
 join baz on varchar_3=text_any;
-                                           QUERY PLAN
+                                           QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
  Hash Join  (cost=0.00..1293.00 rows=1 width=12)
    Hash Cond: ((foo.varchar_3)::bpchar = bar.char_3)

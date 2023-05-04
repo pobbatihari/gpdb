@@ -3346,7 +3346,7 @@ INNER JOIN member_subgroup
 ON member_group.group_id = member_subgroup.group_id
 LEFT OUTER JOIN region
 ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = region.county_name);
-                                               QUERY PLAN
+                                               QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice5; segments: 3)
    ->  Hash Left Join
@@ -3687,7 +3687,7 @@ EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0';
 -- datatype is compatible with the distribution key, the other's is not. We can
 -- redistribute based on the compatible constant.
 EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0' AND b = float4 '3.0';
-                                             QUERY PLAN
+                                             QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=2.21..5.49 rows=5 width=8)
    ->  Hash Join  (cost=2.21..5.39 rows=2 width=8)
@@ -3728,7 +3728,7 @@ set enable_seqscan = off;
 set enable_bitmapscan = off;
 analyze t_9427;
 explain (costs off) select * from t_9427 where a in (select a from t_9427 where c < 100 ) and a < 200;
-                                                                  QUERY PLAN
+                                                                  QUERY PLAN                                                                   
 -----------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Merge Join
@@ -3839,14 +3839,6 @@ select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from
 select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
  a1 | b1 | a2 | b2 | a3 | b3 
 ----+----+----+----+----+----
-  2 |  2 |    |    |    |   
-  3 |  3 |    |    |    |   
-  4 |  4 |    |    |    |   
-  7 |  7 |    |    |    |   
-  8 |  8 |    |    |    |   
- 16 | 16 | 16 |    |    |   
- 18 | 18 | 18 |    |    |   
- 19 | 19 | 19 |    |    |   
   1 |  1 |    |    |    |   
  12 | 12 | 12 |    |    |   
  15 | 15 | 15 |    |    |   
@@ -3859,10 +3851,18 @@ select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from
  13 | 13 | 13 |    |    |   
  14 | 14 | 14 |    |    |   
  17 | 17 | 17 |    |    |   
+  2 |  2 |    |    |    |   
+  3 |  3 |    |    |    |   
+  4 |  4 |    |    |    |   
+  7 |  7 |    |    |    |   
+  8 |  8 |    |    |    |   
+ 16 | 16 | 16 |    |    |   
+ 18 | 18 | 18 |    |    |   
+ 19 | 19 | 19 |    |    |   
 (20 rows)
 
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
-                                                     QUERY PLAN
+                                                     QUERY PLAN                                                      
 ---------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=40000000007.26..40000000009.47 rows=20 width=24)
    ->  Nested Loop Left Join  (cost=40000000007.26..40000000009.47 rows=7 width=24)
@@ -3882,7 +3882,7 @@ explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not disti
 (15 rows)
 
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
-                                                     QUERY PLAN
+                                                     QUERY PLAN                                                      
 ---------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=40000000007.26..40000000009.62 rows=20 width=24)
    ->  Nested Loop Left Join  (cost=40000000007.26..40000000009.62 rows=7 width=24)
@@ -3902,7 +3902,7 @@ explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not disti
 (15 rows)
 
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
-                                                     QUERY PLAN
+                                                     QUERY PLAN                                                      
 ---------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=30000000009.12..30000000009.25 rows=20 width=24)
    ->  Merge Left Join  (cost=30000000009.12..30000000009.25 rows=7 width=24)
@@ -3972,7 +3972,7 @@ insert into baz values ('cd  '); -- 2 trailing spaces
 -- varchar cast to bpchar
 -- 'cd' matches 'cd', returns 1 row
 explain select varchar_3, char_3 from foo join bar on varchar_3=char_3;
-                                                       QUERY PLAN
+                                                       QUERY PLAN                                                       
 ------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=20000000002.06..20000000002.08 rows=4 width=7)
    ->  Merge Join  (cost=20000000002.06..20000000002.08 rows=2 width=7)
@@ -3997,7 +3997,7 @@ select varchar_3, char_3 from foo join bar on varchar_3=char_3;
 -- char cast to text
 -- 'cd' doesn't match 'cd  ', returns 0 rows
 explain select char_3, text_any from bar join baz on char_3=text_any;
-                                                          QUERY PLAN
+                                                          QUERY PLAN                                                          
 ------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=20000000002.06..20000000002.09 rows=4 width=9)
    ->  Merge Join  (cost=20000000002.06..20000000002.09 rows=2 width=9)
@@ -4027,7 +4027,7 @@ select char_3, text_any from bar join baz on char_3=text_any;
 -- Notice ORCA changes join order to minimize motion
 explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
 join baz on varchar_3=text_any;
-                                                             QUERY PLAN
+                                                             QUERY PLAN                                                             
 ------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=30000000003.19..30000000003.35 rows=4 width=12)
    ->  Merge Join  (cost=30000000003.19..30000000003.35 rows=2 width=12)
