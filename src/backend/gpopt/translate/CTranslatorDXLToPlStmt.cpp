@@ -4962,6 +4962,9 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 		rte->requiredPerms |= acl_mode;
 		return index;
 	}
+	// RTE from original query
+	const RangeTblEntry *rte_orig_query = (RangeTblEntry *) gpdb::ListNth(
+		m_dxl_to_plstmt_context->m_orig_query->rtable, int(index - 1));
 
 	// create a new RTE (and it's alias) and store it at context rtable list
 	RangeTblEntry *rte = MakeNode(RangeTblEntry);
@@ -4970,6 +4973,11 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	rte->checkAsUser = table_descr->GetExecuteAsUserId();
 	rte->requiredPerms |= acl_mode;
 	rte->rellockmode = table_descr->LockMode();
+	rte->relkind = rte_orig_query->relkind;
+	rte->selectedCols = rte_orig_query->selectedCols;
+	rte->insertedCols = rte_orig_query->insertedCols;
+	rte->updatedCols = rte_orig_query->updatedCols;
+	rte->extraUpdatedCols = rte_orig_query->extraUpdatedCols;
 
 	Alias *alias = MakeNode(Alias);
 	alias->colnames = NIL;
