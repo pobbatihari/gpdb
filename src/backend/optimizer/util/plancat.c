@@ -666,7 +666,7 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		return rel->rd_rel->reltuples;
 
 	inheritors = find_all_inheritors(RelationGetRelid(rel),
-									 NoLock,
+									 AccessShareLock,
 									 NULL);
 	totaltuples = 0;
 	foreach(lc, inheritors)
@@ -676,7 +676,7 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		double		childtuples;
 
 		if (childid != RelationGetRelid(rel))
-			childrel = RelationIdGetRelation(childid);
+			childrel = try_table_open(childid, NoLock, false);
 		else
 			childrel = rel;
 
@@ -706,7 +706,7 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		totaltuples += childtuples;
 
 		if (childrel != rel)
-			heap_close(childrel, NoLock);
+			heap_close(childrel, AccessShareLock);
 	}
 	return totaltuples;
 }
