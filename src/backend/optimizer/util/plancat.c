@@ -665,6 +665,12 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 	if (rel->rd_rel->reltuples > 0)
 		return rel->rd_rel->reltuples;
 
+	// To prevent any concurrent transaction from causing discrepancies in
+	// the computation of the relation totaltuples, it is recommended to
+	// obtain an AccessShareLock on the leaf partitions. This lock will
+	// ensure that any truncation operation performed by concurrent
+	// transactions on the leaf partitions does not interfere with the
+	// accuracy of the totaltuples calculation.
 	inheritors = find_all_inheritors(RelationGetRelid(rel),
 									 AccessShareLock,
 									 NULL);
@@ -706,6 +712,12 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		totaltuples += childtuples;
 
 		if (childrel != rel)
+			// try_table_open() asserts if the caller doesn't holds
+			// any lock on the relation being opened.  However, at
+			// find_all_inheritors() function, we have already
+			// acquired an AccessShareLock on the leaf partitions.
+			// Therefore, we can safely release the AccessShareLock
+			// after the necessary processing has been completed.
 			heap_close(childrel, AccessShareLock);
 	}
 	return totaltuples;
