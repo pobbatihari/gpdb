@@ -718,6 +718,11 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 			// acquired an AccessShareLock on the leaf partitions.
 			// Therefore, we can safely release the AccessShareLock
 			// after the necessary processing has been completed.
+			// This approach helps us to avoid unnecessary locks on
+			// the leaf partitions. It is worth noting that later
+			// on, we acquire locks on unpruned partitions, which
+			// allows concurrent transactions on the leaf
+			// partitions that are available for use.
 			heap_close(childrel, AccessShareLock);
 	}
 	return totaltuples;

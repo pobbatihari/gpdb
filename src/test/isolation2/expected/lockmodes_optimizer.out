@@ -1040,11 +1040,11 @@ BEGIN
 DELETE 10
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
- locktype | mode          | granted | relation
+ locktype | mode          | granted | relation                        
 ----------+---------------+---------+---------------------------------
- relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2
- relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml
- relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1
+ relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml         
+ relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
@@ -1093,12 +1093,12 @@ BEGIN
 UPDATE 1
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
- locktype | mode            | granted | relation
+ locktype | mode            | granted | relation                        
 ----------+-----------------+---------+---------------------------------
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_2
- relation | AccessShareLock | t       | t_lockmods_part_tbl_dml
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_1
+ relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | AccessShareLock | t       | t_lockmods_part_tbl_dml         
+ relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml         
+ relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_1 
 (4 rows)
 1: ROLLBACK;
 ROLLBACK
@@ -2144,12 +2144,12 @@ BEGIN
 DELETE 10
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
- locktype | mode             | granted | relation
+ locktype | mode             | granted | relation                        
 ----------+------------------+---------+---------------------------------
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1
- relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml         
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml         
 (4 rows)
 1: ROLLBACK;
 ROLLBACK
@@ -2161,12 +2161,12 @@ BEGIN
 UPDATE 1
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
- locktype | mode             | granted | relation
+ locktype | mode             | granted | relation                        
 ----------+------------------+---------+---------------------------------
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1
- relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml         
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml         
 (4 rows)
 1: ROLLBACK;
 ROLLBACK
@@ -2225,11 +2225,11 @@ BEGIN
 DELETE 0
 -- With GDD enabled, QD will only hold lock on root for delete
 1: select * from show_locks_lockmodes;
- locktype | mode            | granted | relation
+ locktype | mode            | granted | relation                  
 ----------+-----------------+---------+---------------------------
- relation | ExclusiveLock   | t       | t_lockmods_aopart_1_prt_4
- relation | AccessShareLock | t       | t_lockmods_aopart
- relation | ExclusiveLock   | t       | t_lockmods_aopart
+ relation | ExclusiveLock   | t       | t_lockmods_aopart_1_prt_4 
+ relation | AccessShareLock | t       | t_lockmods_aopart         
+ relation | ExclusiveLock   | t       | t_lockmods_aopart         
 (3 rows)
 1: COMMIT;
 COMMIT
