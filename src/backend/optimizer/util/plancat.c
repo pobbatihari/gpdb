@@ -665,15 +665,11 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 	if (rel->rd_rel->reltuples > 0)
 		return rel->rd_rel->reltuples;
 
-	// To prevent any concurrent transaction from causing discrepancies in
-	// the computation of the relation totaltuples, it is recommended to
-	// obtain an AccessShareLock on the leaf partitions. This lock will
-	// ensure that any truncation operation performed by concurrent
-	// transactions on the leaf partitions does not interfere with the
-	// accuracy of the totaltuples calculation.
-	inheritors = find_all_inheritors(RelationGetRelid(rel),
-									 AccessShareLock,
-									 NULL);
+	// To avoid blocking concurrent transactions on leaf partitions
+	// throughout the entire transition, we refrain from acquiring locks on
+	// the leaf partitions. Instead, we acquire locks only on the
+	// partitions that need to be scanned when ORCA writes the plan.
+	inheritors = find_all_inheritors(RelationGetRelid(rel), NoLock, NULL);
 	totaltuples = 0;
 	foreach(lc, inheritors)
 	{
@@ -682,7 +678,7 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		double		childtuples;
 
 		if (childid != RelationGetRelid(rel))
-			childrel = try_table_open(childid, NoLock, false);
+			childrel = childrel = RelationIdGetRelation(childid);
 		else
 			childrel = rel;
 
@@ -712,18 +708,7 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		totaltuples += childtuples;
 
 		if (childrel != rel)
-			// try_table_open() asserts if the caller doesn't holds
-			// any lock on the relation being opened.  However, at
-			// find_all_inheritors() function, we have already
-			// acquired an AccessShareLock on the leaf partitions.
-			// Therefore, we can safely release the AccessShareLock
-			// after the necessary processing has been completed.
-			// This approach helps us to avoid unnecessary locks on
-			// the leaf partitions. It is worth noting that later
-			// on, we acquire locks on unpruned partitions, which
-			// allows concurrent transactions on the leaf
-			// partitions that are available for use.
-			heap_close(childrel, AccessShareLock);
+			heap_close(childrel, NoLock);
 	}
 	return totaltuples;
 }
