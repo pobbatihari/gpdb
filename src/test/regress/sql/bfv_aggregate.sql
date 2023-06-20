@@ -1505,6 +1505,27 @@ explain (costs off) select count(distinct(b)), gp_segment_id from t group by gp_
 select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 
 drop table t;
+
+-- Test defferral keyword on primary/unique key
+drop table if exists t1, t2, t3, t4, t5, t6;
+create table t1 (a int, b int, c int, primary key(a, b));
+create table t2 (a int, b int, c int, primary key(a, b) deferrable);
+create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
+create table t4 (a int, b int, c int, unique(a, b));
+create table t5 (a int, b int, c int, unique(a, b) deferrable);
+create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
+
+explain select * from t1 group by a, b, c;
+explain select * from t2 group by a, b, c;
+explain select * from t3 group by a, b, c;
+explain select * from t4 group by a, b, c;
+explain select * from t5 group by a, b, c;
+explain select * from t6 group by a, b, c;
+
+explain with cte1 as (select * from t3 group by a, b, c) select * from cte1;
+
+drop table  t1, t2, t3, t4, t5, t6;
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

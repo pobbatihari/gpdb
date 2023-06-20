@@ -1947,6 +1947,90 @@ select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 (1 row)
 
 drop table t;
+-- Test defferral keyword on primary/unique key
+drop table if exists t1, t2, t3, t4, t5, t6;
+NOTICE:  table "t2" does not exist, skipping
+NOTICE:  table "t3" does not exist, skipping
+NOTICE:  table "t4" does not exist, skipping
+NOTICE:  table "t5" does not exist, skipping
+NOTICE:  table "t6" does not exist, skipping
+create table t1 (a int, b int, c int, primary key(a, b));
+create table t2 (a int, b int, c int, primary key(a, b) deferrable);
+create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
+create table t4 (a int, b int, c int, unique(a, b));
+create table t5 (a int, b int, c int, unique(a, b) deferrable);
+create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
+explain select * from t1 group by a, b, c;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=423.50..553.33 rows=7790 width=12)
+   ->  HashAggregate  (cost=423.50..449.47 rows=2597 width=12)
+         Group Key: a, b
+         ->  Seq Scan on t1  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select * from t2 group by a, b, c;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+         Group Key: a, b, c
+         ->  Seq Scan on t2  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select * from t3 group by a, b, c;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+         Group Key: a, b, c
+         ->  Seq Scan on t3  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select * from t4 group by a, b, c;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+         Group Key: a, b, c
+         ->  Seq Scan on t4  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select * from t5 group by a, b, c;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+         Group Key: a, b, c
+         ->  Seq Scan on t5  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select * from t6 group by a, b, c;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+         Group Key: a, b, c
+         ->  Seq Scan on t6  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain with cte1 as (select * from t3 group by a, b, c) select * from cte1;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+         Group Key: t3.a, t3.b, t3.c
+         ->  Seq Scan on t3  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+drop table  t1, t2, t3, t4, t5, t6;
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

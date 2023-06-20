@@ -4012,7 +4012,11 @@ get_relation_keys(Oid relid)
 		{
 			continue;
 		}
-			
+		// skip the constraint if deferrable
+		if (contuple->condeferrable || contuple->condeferred)
+		{
+			continue;
+		}
 		// store key set in an array
 		List *key = NIL;
 		
