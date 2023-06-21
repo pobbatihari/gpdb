@@ -678,7 +678,7 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		double		childtuples;
 
 		if (childid != RelationGetRelid(rel))
-			childrel = childrel = RelationIdGetRelation(childid);
+			childrel = RelationIdGetRelation(childid);
 		else
 			childrel = rel;
 
