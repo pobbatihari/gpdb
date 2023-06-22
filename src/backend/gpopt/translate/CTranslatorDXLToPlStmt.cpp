@@ -4298,7 +4298,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 
 	const CDXLTableDescr *dxl_table_descr =
 		dyn_tbl_scan_dxlop->GetDXLTableDescr();
-	GPOS_RTL_ASSERT(dxl_table_descr->LockMode() != -1);
+	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 
 	for (ULONG ul = 0; ul < parts->Size(); ul++)
 	{
@@ -4387,7 +4387,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 
 	List *oids_list = NIL;
 
-	GPOS_RTL_ASSERT(table_desc->LockMode() != -1);
+	GPOS_ASSERT(table_desc->LockMode() != -1);
 
 	for (ULONG ul = 0; ul < parts->Size(); ul++)
 	{
