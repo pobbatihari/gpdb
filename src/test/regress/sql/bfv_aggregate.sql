@@ -1507,20 +1507,30 @@ select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 drop table t;
 
 -- Test defferral keyword on primary/unique key
+-- When the grouping columns include a key, the GbAgg operator can be transformed to a Select,
+-- resulting in the dropping of grouping columns. However, it is important to note that if a primary
+-- or unique key has the deferral keyword, ORCA should not optimize (drop grouping columns) in such cases.
+
 drop table if exists t1, t2, t3, t4, t5, t6;
 create table t1 (a int, b int, c int, primary key(a, b));
+insert into t1 select i, i%10, i from generate_series(1, 100)i;
 create table t2 (a int, b int, c int, primary key(a, b) deferrable);
+insert into t2 select i, i%10, i from generate_series(1, 100)i;
 create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
+insert into t3 select i, i%10, i from generate_series(1, 100)i;
 create table t4 (a int, b int, c int, unique(a, b));
+insert into t4 select i, i%10, i from generate_series(1, 100)i;
 create table t5 (a int, b int, c int, unique(a, b) deferrable);
+insert into t5 select i, i%10, i from generate_series(1, 100)i;
 create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
+insert into t6 select i, i%10, i from generate_series(1, 100)i;
 
-explain select * from t1 group by a, b, c;
-explain select * from t2 group by a, b, c;
-explain select * from t3 group by a, b, c;
-explain select * from t4 group by a, b, c;
-explain select * from t5 group by a, b, c;
-explain select * from t6 group by a, b, c;
+explain analyze select * from t1 group by a, b, c;
+explain analyze select * from t2 group by a, b, c;
+explain analyze select * from t3 group by a, b, c;
+explain analyze select * from t4 group by a, b, c;
+explain analyze select * from t5 group by a, b, c;
+explain analyze select * from t6 group by a, b, c;
 
 explain with cte1 as (select * from t3 group by a, b, c) select * from cte1;
 

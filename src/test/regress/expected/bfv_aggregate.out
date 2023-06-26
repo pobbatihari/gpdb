@@ -1948,6 +1948,9 @@ select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 
 drop table t;
 -- Test defferral keyword on primary/unique key
+-- When the grouping columns include a key, the GbAgg operator can be transformed to a Select,
+-- resulting in the dropping of grouping columns. However, it is important to note that if a primary
+-- or unique key has the deferral keyword, ORCA should not optimize (drop grouping columns) in such cases.
 drop table if exists t1, t2, t3, t4, t5, t6;
 NOTICE:  table "t2" does not exist, skipping
 NOTICE:  table "t3" does not exist, skipping
@@ -1955,70 +1958,112 @@ NOTICE:  table "t4" does not exist, skipping
 NOTICE:  table "t5" does not exist, skipping
 NOTICE:  table "t6" does not exist, skipping
 create table t1 (a int, b int, c int, primary key(a, b));
+insert into t1 select i, i%10, i from generate_series(1, 100)i;
 create table t2 (a int, b int, c int, primary key(a, b) deferrable);
+insert into t2 select i, i%10, i from generate_series(1, 100)i;
 create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
+insert into t3 select i, i%10, i from generate_series(1, 100)i;
 create table t4 (a int, b int, c int, unique(a, b));
+insert into t4 select i, i%10, i from generate_series(1, 100)i;
 create table t5 (a int, b int, c int, unique(a, b) deferrable);
+insert into t5 select i, i%10, i from generate_series(1, 100)i;
 create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
-explain select * from t1 group by a, b, c;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=423.50..553.33 rows=7790 width=12)
-   ->  HashAggregate  (cost=423.50..449.47 rows=2597 width=12)
+insert into t6 select i, i%10, i from generate_series(1, 100)i;
+explain analyze select * from t1 group by a, b, c;
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=423.50..553.33 rows=7790 width=12) (actual time=0.572..0.611 rows=100 loops=1)
+   ->  HashAggregate  (cost=423.50..449.47 rows=2597 width=12) (actual time=0.253..0.291 rows=41 loops=1)
          Group Key: a, b
-         ->  Seq Scan on t1  (cost=0.00..293.67 rows=25967 width=12)
+         Peak Memory Usage: 0 kB
+         ->  Seq Scan on t1  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.202..0.210 rows=41 loops=1)
  Optimizer: Postgres query optimizer
-(5 rows)
+ Planning Time: 1.010 ms
+   (slice0)    Executor memory: 122K bytes.
+   (slice1)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).  Work_mem: 121K bytes max.
+ Memory used:  128000kB
+ Execution Time: 1.353 ms
+(11 rows)
 
-explain select * from t2 group by a, b, c;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
-   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+explain analyze select * from t2 group by a, b, c;
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12) (actual time=0.885..1.009 rows=100 loops=1)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12) (actual time=0.271..0.332 rows=41 loops=1)
          Group Key: a, b, c
-         ->  Seq Scan on t2  (cost=0.00..293.67 rows=25967 width=12)
+         Peak Memory Usage: 0 kB
+         ->  Seq Scan on t2  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.202..0.214 rows=41 loops=1)
  Optimizer: Postgres query optimizer
-(5 rows)
+ Planning Time: 1.112 ms
+   (slice0)    Executor memory: 122K bytes.
+   (slice1)    Executor memory: 119K bytes avg x 3 workers, 120K bytes max (seg0).  Work_mem: 121K bytes max.
+ Memory used:  128000kB
+ Execution Time: 1.753 ms
+(11 rows)
 
-explain select * from t3 group by a, b, c;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
-   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+explain analyze select * from t3 group by a, b, c;
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12) (actual time=0.796..0.908 rows=100 loops=1)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12) (actual time=0.233..0.301 rows=41 loops=1)
          Group Key: a, b, c
-         ->  Seq Scan on t3  (cost=0.00..293.67 rows=25967 width=12)
+         Peak Memory Usage: 0 kB
+         ->  Seq Scan on t3  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.179..0.188 rows=41 loops=1)
  Optimizer: Postgres query optimizer
-(5 rows)
+ Planning Time: 1.070 ms
+   (slice0)    Executor memory: 122K bytes.
+   (slice1)    Executor memory: 119K bytes avg x 3 workers, 120K bytes max (seg0).  Work_mem: 121K bytes max.
+ Memory used:  128000kB
+ Execution Time: 1.608 ms
+(11 rows)
 
-explain select * from t4 group by a, b, c;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
-   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+explain analyze select * from t4 group by a, b, c;
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12) (actual time=0.611..0.650 rows=100 loops=1)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12) (actual time=0.237..0.275 rows=41 loops=1)
          Group Key: a, b, c
-         ->  Seq Scan on t4  (cost=0.00..293.67 rows=25967 width=12)
+         Peak Memory Usage: 0 kB
+         ->  Seq Scan on t4  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.185..0.193 rows=41 loops=1)
  Optimizer: Postgres query optimizer
-(5 rows)
+ Planning Time: 0.917 ms
+   (slice0)    Executor memory: 122K bytes.
+   (slice1)    Executor memory: 119K bytes avg x 3 workers, 120K bytes max (seg0).  Work_mem: 121K bytes max.
+ Memory used:  128000kB
+ Execution Time: 1.240 ms
+(11 rows)
 
-explain select * from t5 group by a, b, c;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
-   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+explain analyze select * from t5 group by a, b, c;
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12) (actual time=0.638..0.742 rows=100 loops=1)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12) (actual time=0.241..0.309 rows=41 loops=1)
          Group Key: a, b, c
-         ->  Seq Scan on t5  (cost=0.00..293.67 rows=25967 width=12)
+         Peak Memory Usage: 0 kB
+         ->  Seq Scan on t5  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.187..0.196 rows=41 loops=1)
  Optimizer: Postgres query optimizer
-(5 rows)
+ Planning Time: 1.009 ms
+   (slice0)    Executor memory: 122K bytes.
+   (slice1)    Executor memory: 119K bytes avg x 3 workers, 120K bytes max (seg0).  Work_mem: 121K bytes max.
+ Memory used:  128000kB
+ Execution Time: 1.987 ms
+(11 rows)
 
-explain select * from t6 group by a, b, c;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12)
-   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12)
+explain analyze select * from t6 group by a, b, c;
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=488.42..618.25 rows=7790 width=12) (actual time=0.742..0.850 rows=100 loops=1)
+   ->  HashAggregate  (cost=488.42..514.38 rows=2597 width=12) (actual time=0.295..0.387 rows=41 loops=1)
          Group Key: a, b, c
-         ->  Seq Scan on t6  (cost=0.00..293.67 rows=25967 width=12)
+         Peak Memory Usage: 0 kB
+         ->  Seq Scan on t6  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.170..0.184 rows=41 loops=1)
  Optimizer: Postgres query optimizer
-(5 rows)
+ Planning Time: 1.092 ms
+   (slice0)    Executor memory: 122K bytes.
+   (slice1)    Executor memory: 119K bytes avg x 3 workers, 120K bytes max (seg0).  Work_mem: 121K bytes max.
+ Memory used:  128000kB
+ Execution Time: 1.567 ms
+(11 rows)
 
 explain with cte1 as (select * from t3 group by a, b, c) select * from cte1;
                                      QUERY PLAN                                     
