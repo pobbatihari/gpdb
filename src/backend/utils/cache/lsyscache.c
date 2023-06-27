@@ -4014,7 +4014,7 @@ get_relation_keys(Oid relid)
 		}
 
 		// skip the constraint if deferrable
-		if (contuple->condeferrable || contuple->condeferred)
+		if (contuple->condeferrable)
 		{
 			continue;
 		}
