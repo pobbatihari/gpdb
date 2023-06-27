@@ -1988,127 +1988,305 @@ NOTICE:  table "t5" does not exist, skipping
 NOTICE:  table "t6" does not exist, skipping
 create table t1 (a int, b int, c int, primary key(a, b));
 insert into t1 select i, i%10, i from generate_series(1, 100)i;
+analyze t1;
 create table t2 (a int, b int, c int, primary key(a, b) deferrable);
 insert into t2 select i, i%10, i from generate_series(1, 100)i;
+analyze t2;
 create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
 insert into t3 select i, i%10, i from generate_series(1, 100)i;
+analyze t3;
 create table t4 (a int, b int, c int, unique(a, b));
 insert into t4 select i, i%10, i from generate_series(1, 100)i;
+analyze t4;
 create table t5 (a int, b int, c int, unique(a, b) deferrable);
 insert into t5 select i, i%10, i from generate_series(1, 100)i;
+analyze t5;
 create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
 insert into t6 select i, i%10, i from generate_series(1, 100)i;
-explain analyze select * from t1 group by a, b, c;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.653..0.691 rows=100 loops=1)
-   ->  Seq Scan on t1  (cost=0.00..431.00 rows=1 width=12) (actual time=0.286..0.293 rows=41 loops=1)
+analyze t6;
+explain (costs off) select * from t1 group by a, b, c;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on t1
  Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 9.226 ms
-   (slice0)    Executor memory: 36K bytes.
-   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 1.316 ms
-(8 rows)
+(3 rows)
 
-explain analyze select * from t2 group by a, b, c;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.757..0.795 rows=100 loops=1)
-   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12) (actual time=0.309..0.360 rows=41 loops=1)
+select * from t2 group by a, b, c;
+  a  | b |  c  
+-----+---+-----
+   1 | 1 |   1
+   6 | 6 |   6
+   8 | 8 |   8
+  12 | 2 |  12
+  15 | 5 |  15
+  16 | 6 |  16
+  17 | 7 |  17
+  20 | 0 |  20
+  22 | 2 |  22
+  35 | 5 |  35
+  37 | 7 |  37
+  41 | 1 |  41
+  42 | 2 |  42
+  43 | 3 |  43
+  45 | 5 |  45
+  55 | 5 |  55
+  64 | 4 |  64
+  69 | 9 |  69
+  72 | 2 |  72
+  74 | 4 |  74
+  76 | 6 |  76
+  77 | 7 |  77
+  80 | 0 |  80
+  83 | 3 |  83
+  85 | 5 |  85
+  89 | 9 |  89
+  91 | 1 |  91
+  93 | 3 |  93
+  98 | 8 |  98
+   9 | 9 |   9
+  11 | 1 |  11
+  13 | 3 |  13
+  23 | 3 |  23
+  24 | 4 |  24
+  26 | 6 |  26
+  28 | 8 |  28
+  31 | 1 |  31
+  33 | 3 |  33
+  36 | 6 |  36
+  39 | 9 |  39
+  46 | 6 |  46
+  47 | 7 |  47
+  48 | 8 |  48
+  49 | 9 |  49
+  50 | 0 |  50
+  56 | 6 |  56
+  57 | 7 |  57
+  58 | 8 |  58
+  60 | 0 |  60
+  62 | 2 |  62
+  65 | 5 |  65
+  70 | 0 |  70
+  75 | 5 |  75
+  81 | 1 |  81
+  87 | 7 |  87
+  90 | 0 |  90
+  92 | 2 |  92
+  94 | 4 |  94
+  99 | 9 |  99
+   2 | 2 |   2
+   3 | 3 |   3
+   4 | 4 |   4
+   5 | 5 |   5
+   7 | 7 |   7
+  10 | 0 |  10
+  14 | 4 |  14
+  18 | 8 |  18
+  19 | 9 |  19
+  21 | 1 |  21
+  25 | 5 |  25
+  27 | 7 |  27
+  29 | 9 |  29
+  30 | 0 |  30
+  32 | 2 |  32
+  34 | 4 |  34
+  38 | 8 |  38
+  40 | 0 |  40
+  44 | 4 |  44
+  51 | 1 |  51
+  52 | 2 |  52
+  53 | 3 |  53
+  54 | 4 |  54
+  59 | 9 |  59
+  61 | 1 |  61
+  63 | 3 |  63
+  66 | 6 |  66
+  67 | 7 |  67
+  68 | 8 |  68
+  71 | 1 |  71
+  73 | 3 |  73
+  78 | 8 |  78
+  79 | 9 |  79
+  82 | 2 |  82
+  84 | 4 |  84
+  86 | 6 |  86
+  88 | 8 |  88
+  95 | 5 |  95
+  96 | 6 |  96
+  97 | 7 |  97
+ 100 | 0 | 100
+(100 rows)
+
+explain (costs off) select * from t2 group by a, b, c;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
          Group Key: a, b, c
-         ->  Sort  (cost=0.00..431.00 rows=1 width=12) (actual time=0.301..0.314 rows=41 loops=1)
+         ->  Sort
                Sort Key: a, b, c
-               Sort Method:  quicksort  Memory: 79kB
-               Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
-               ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=12) (actual time=0.278..0.285 rows=41 loops=1)
+               ->  Seq Scan on t2
  Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 9.886 ms
-   (slice0)    Executor memory: 41K bytes.
-   (slice1)    Executor memory: 41K bytes avg x 3 workers, 41K bytes max (seg0).  Work_mem: 27K bytes max.
- Memory used:  128000kB
- Execution Time: 1.549 ms
-(14 rows)
+(7 rows)
 
-explain analyze select * from t3 group by a, b, c;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.724..0.760 rows=100 loops=1)
-   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12) (actual time=0.353..0.404 rows=41 loops=1)
+select * from t3 group by a, b, c;
+  a  | b |  c  
+-----+---+-----
+   1 | 1 |   1
+   6 | 6 |   6
+   8 | 8 |   8
+  12 | 2 |  12
+  15 | 5 |  15
+  16 | 6 |  16
+  17 | 7 |  17
+  20 | 0 |  20
+  22 | 2 |  22
+  35 | 5 |  35
+  37 | 7 |  37
+  41 | 1 |  41
+  42 | 2 |  42
+  43 | 3 |  43
+  45 | 5 |  45
+  55 | 5 |  55
+  64 | 4 |  64
+  69 | 9 |  69
+  72 | 2 |  72
+  74 | 4 |  74
+  76 | 6 |  76
+  77 | 7 |  77
+  80 | 0 |  80
+  83 | 3 |  83
+  85 | 5 |  85
+  89 | 9 |  89
+  91 | 1 |  91
+  93 | 3 |  93
+  98 | 8 |  98
+   2 | 2 |   2
+   3 | 3 |   3
+   4 | 4 |   4
+   5 | 5 |   5
+   7 | 7 |   7
+  10 | 0 |  10
+  14 | 4 |  14
+  18 | 8 |  18
+  19 | 9 |  19
+  21 | 1 |  21
+  25 | 5 |  25
+  27 | 7 |  27
+  29 | 9 |  29
+  30 | 0 |  30
+  32 | 2 |  32
+  34 | 4 |  34
+  38 | 8 |  38
+  40 | 0 |  40
+  44 | 4 |  44
+  51 | 1 |  51
+  52 | 2 |  52
+  53 | 3 |  53
+  54 | 4 |  54
+  59 | 9 |  59
+  61 | 1 |  61
+  63 | 3 |  63
+  66 | 6 |  66
+  67 | 7 |  67
+  68 | 8 |  68
+  71 | 1 |  71
+  73 | 3 |  73
+  78 | 8 |  78
+  79 | 9 |  79
+  82 | 2 |  82
+  84 | 4 |  84
+  86 | 6 |  86
+  88 | 8 |  88
+  95 | 5 |  95
+  96 | 6 |  96
+  97 | 7 |  97
+ 100 | 0 | 100
+   9 | 9 |   9
+  11 | 1 |  11
+  13 | 3 |  13
+  23 | 3 |  23
+  24 | 4 |  24
+  26 | 6 |  26
+  28 | 8 |  28
+  31 | 1 |  31
+  33 | 3 |  33
+  36 | 6 |  36
+  39 | 9 |  39
+  46 | 6 |  46
+  47 | 7 |  47
+  48 | 8 |  48
+  49 | 9 |  49
+  50 | 0 |  50
+  56 | 6 |  56
+  57 | 7 |  57
+  58 | 8 |  58
+  60 | 0 |  60
+  62 | 2 |  62
+  65 | 5 |  65
+  70 | 0 |  70
+  75 | 5 |  75
+  81 | 1 |  81
+  87 | 7 |  87
+  90 | 0 |  90
+  92 | 2 |  92
+  94 | 4 |  94
+  99 | 9 |  99
+(100 rows)
+
+explain (costs off) select * from t3 group by a, b, c;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
          Group Key: a, b, c
-         ->  Sort  (cost=0.00..431.00 rows=1 width=12) (actual time=0.345..0.358 rows=41 loops=1)
+         ->  Sort
                Sort Key: a, b, c
-               Sort Method:  quicksort  Memory: 79kB
-               Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
-               ->  Seq Scan on t3  (cost=0.00..431.00 rows=1 width=12) (actual time=0.320..0.327 rows=41 loops=1)
+               ->  Seq Scan on t3
  Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 9.780 ms
-   (slice0)    Executor memory: 41K bytes.
-   (slice1)    Executor memory: 41K bytes avg x 3 workers, 41K bytes max (seg0).  Work_mem: 27K bytes max.
- Memory used:  128000kB
- Execution Time: 1.499 ms
-(14 rows)
+(7 rows)
 
-explain analyze select * from t4 group by a, b, c;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.622..0.658 rows=100 loops=1)
-   ->  Seq Scan on t4  (cost=0.00..431.00 rows=1 width=12) (actual time=0.279..0.286 rows=41 loops=1)
+explain (costs off) select * from t4 group by a, b, c;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on t4
  Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 9.599 ms
-   (slice0)    Executor memory: 36K bytes.
-   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 1.281 ms
-(8 rows)
+(3 rows)
 
-explain analyze select * from t5 group by a, b, c;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.760..0.794 rows=100 loops=1)
-   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12) (actual time=0.284..0.334 rows=41 loops=1)
+explain (costs off) select * from t5 group by a, b, c;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
          Group Key: a, b, c
-         ->  Sort  (cost=0.00..431.00 rows=1 width=12) (actual time=0.275..0.287 rows=41 loops=1)
+         ->  Sort
                Sort Key: a, b, c
-               Sort Method:  quicksort  Memory: 79kB
-               Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
-               ->  Seq Scan on t5  (cost=0.00..431.00 rows=1 width=12) (actual time=0.250..0.258 rows=41 loops=1)
+               ->  Seq Scan on t5
  Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 9.645 ms
-   (slice0)    Executor memory: 41K bytes.
-   (slice1)    Executor memory: 41K bytes avg x 3 workers, 41K bytes max (seg0).  Work_mem: 27K bytes max.
- Memory used:  128000kB
- Execution Time: 1.489 ms
-(14 rows)
+(7 rows)
 
-explain analyze select * from t6 group by a, b, c;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.785..0.821 rows=100 loops=1)
-   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12) (actual time=0.322..0.374 rows=41 loops=1)
+explain (costs off) select * from t6 group by a, b, c;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
          Group Key: a, b, c
-         ->  Sort  (cost=0.00..431.00 rows=1 width=12) (actual time=0.314..0.328 rows=41 loops=1)
+         ->  Sort
                Sort Key: a, b, c
-               Sort Method:  quicksort  Memory: 79kB
-               Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
-               ->  Seq Scan on t6  (cost=0.00..431.00 rows=1 width=12) (actual time=0.291..0.299 rows=41 loops=1)
+               ->  Seq Scan on t6
  Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 9.143 ms
-   (slice0)    Executor memory: 41K bytes.
-   (slice1)    Executor memory: 41K bytes avg x 3 workers, 41K bytes max (seg0).  Work_mem: 27K bytes max.
- Memory used:  128000kB
- Execution Time: 1.526 ms
-(14 rows)
+(7 rows)
 
-explain with cte1 as (select * from t3 group by a, b, c) select * from cte1;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-   ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+explain (costs off) with cte1 as (select * from t3 group by a, b, c) select * from cte1;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
          Group Key: a, b, c
-         ->  Sort  (cost=0.00..431.00 rows=1 width=12)
+         ->  Sort
                Sort Key: a, b, c
-               ->  Seq Scan on t3  (cost=0.00..431.00 rows=1 width=12)
+               ->  Seq Scan on t3
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
