@@ -1513,34 +1513,24 @@ drop table t;
 
 drop table if exists t1, t2, t3, t4, t5, t6;
 create table t1 (a int, b int, c int, primary key(a, b));
-insert into t1 select i, i%10, i from generate_series(1, 100)i;
-analyze t1;
 create table t2 (a int, b int, c int, primary key(a, b) deferrable);
-insert into t2 select i, i, i from generate_series(1, 10)i;
-analyze t2;
 create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
-insert into t3 select i, i, i from generate_series(1, 10)i;
-analyze t3;
 create table t4 (a int, b int, c int, unique(a, b));
-insert into t4 select i, i%10, i from generate_series(1, 100)i;
-analyze t4;
 create table t5 (a int, b int, c int, unique(a, b) deferrable);
-insert into t5 select i, i%10, i from generate_series(1, 100)i;
-analyze t5;
 create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
-insert into t6 select i, i%10, i from generate_series(1, 100)i;
-analyze t6;
-
 
 explain (costs off) select * from t1 group by a, b, c;
-select * from t2 group by a, b, c;
 explain (costs off) select * from t2 group by a, b, c;
-select * from t3 group by a, b, c;
 explain (costs off) select * from t3 group by a, b, c;
 explain (costs off) select * from t4 group by a, b, c;
 explain (costs off) select * from t5 group by a, b, c;
 explain (costs off) select * from t6 group by a, b, c;
 explain (costs off) with cte1 as (select * from t3 group by a, b, c) select * from cte1;
+
+begin;
+insert into t3 values (1, 1, 1), (1, 1, 1), (1, 2, 1), (1, 3, 1), (1, 2, 1);
+select * from t3 group by a, b, c;
+commit;
 
 drop table  t1, t2, t3, t4, t5, t6;
 
