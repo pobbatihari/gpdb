@@ -684,9 +684,9 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 
 		// If childrel is NULL, continue by assuming the child relation
 		// has 0 tuples.
-		if (NULL == childrel) {
+		if (childrel == NULL)
 			continue;
-		}
+
 		childtuples = childrel->rd_rel->reltuples;
 
 		if (gp_enable_relsize_collection && childtuples == 0)
