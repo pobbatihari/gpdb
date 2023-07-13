@@ -792,13 +792,13 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// Since we do not know the order of tuples received by local hash agg, we assume the number of output rows from local
 	// agg is the average between input and output rows
 
-	// the cardinality out as (rows + num_rows_outer)/2 to increase the local hash agg cost
+	// the cardinality out as rows * number_of_segments to increase the local hash agg cost
 	DOUBLE rows = pci->Rows();
 	CPhysicalHashAgg *popAgg = CPhysicalHashAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
 		popAgg->FGeneratesDuplicates())
 	{
-		rows = (rows + num_rows_outer) / 2.0;
+		rows = rows * pcmgpdb->UlHosts();
 	}
 
 	// get the number of grouping columns
