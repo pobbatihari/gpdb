@@ -25,7 +25,6 @@
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalDynamicIndexScan.h"
 #include "gpopt/operators/CPhysicalHashAgg.h"
-#include "gpopt/operators/CPhysicalStreamAgg.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
 #include "gpopt/operators/CPhysicalIndexScan.h"
 #include "gpopt/operators/CPhysicalMotion.h"
@@ -623,11 +622,6 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
 	DOUBLE rows = pci->Rows();
-	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
-	if (COperator::EgbaggtypeLocal == popAgg->Egbaggtype())
-	{
-		rows = rows * pcmgpdb->UlHosts();
-	}
 	// streamAgg cost is correlated with rows and width of input tuples and rows and width of output tuples
 	CCost costLocal =
 		CCost(pci->NumRebinds() *
