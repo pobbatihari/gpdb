@@ -6139,7 +6139,7 @@
     <dxl:Plan Id="0" SpaceSize="57344">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="5603.009815" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="5603.009824" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="28" Alias="bookname">
@@ -6156,7 +6156,7 @@
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="5603.009726" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="5603.009735" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="28"/>
@@ -6183,7 +6183,7 @@
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="5603.009698" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="5603.009707" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="12" Alias="measurename">
@@ -6205,7 +6205,7 @@
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="5603.009698" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="5603.009707" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="12" Alias="measurename">
@@ -6230,7 +6230,7 @@
               </dxl:HashExprList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="5603.009660" Rows="1.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="5603.009669" Rows="1.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="12" Alias="measurename">
@@ -6247,7 +6247,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="5603.009660" Rows="1.000000" Width="24"/>
+                    <dxl:Cost StartupCost="0" TotalCost="5603.009669" Rows="1.000000" Width="24"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns>
                     <dxl:GroupingColumn ColId="28"/>
@@ -6327,7 +6327,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6409,7 +6409,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6491,7 +6491,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="3" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6573,7 +6573,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="4" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6655,7 +6655,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="5" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6737,7 +6737,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="6" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6819,7 +6819,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="7" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6901,7 +6901,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="8" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -6983,7 +6983,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="9" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -7065,7 +7065,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="10" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -7147,7 +7147,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="11" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -7229,7 +7229,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="12" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>
@@ -7311,7 +7311,7 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:OneTimeFilter/>
-                        <dxl:DynamicTableScan PartIndexId="13" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000717" Rows="1.000000" Width="28"/>
                           </dxl:Properties>

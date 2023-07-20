@@ -31,6 +31,7 @@
 #include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
+#include "gpopt/operators/CPhysicalStreamAgg.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
@@ -621,11 +622,25 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	DOUBLE num_rows_outer = pci->PdRows()[0];
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
+	// Since we do not know the order of tuples received by local stream
+	// agg, we assume the number of output rows from local agg is  equal to
+	// the output rows multiplied by the number of segments.
+
+	// the cardinality out as rows * number_of_segments to increase the
+	// local stream agg cost
+	DOUBLE rows = pci->Rows();
+	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
+	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
+		popAgg->FGeneratesDuplicates())
+	{
+		rows = rows * pcmgpdb->UlHosts();
+	}
+
 	// streamAgg cost is correlated with rows and width of input tuples and rows and width of output tuples
 	CCost costLocal =
 		CCost(pci->NumRebinds() *
 			  (num_rows_outer * dWidthOuter * dTupDefaultProcCostUnit +
-			   pci->Rows() * pci->Width() * dHashAggOutputTupWidthCostUnit));
+			   rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 	return costLocal + costChild;
@@ -790,7 +805,7 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// the number of groups.
 	//
 	// Since we do not know the order of tuples received by local hash agg, we assume the number of output rows from local
-	// agg is the average between input and output rows
+	// agg is  equal to the output rows multiplied by the number of segments.
 
 	// the cardinality out as rows * number_of_segments to increase the local hash agg cost
 	DOUBLE rows = pci->Rows();
