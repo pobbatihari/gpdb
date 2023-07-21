@@ -441,7 +441,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
     <dxl:Plan Id="0" SpaceSize="30837">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2155.684415" Rows="70.000000" Width="10"/>
+          <dxl:Cost StartupCost="0" TotalCost="2155.685279" Rows="70.000000" Width="10"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -458,7 +458,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2155.681272" Rows="70.000000" Width="10"/>
+            <dxl:Cost StartupCost="0" TotalCost="2155.682136" Rows="70.000000" Width="10"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -482,7 +482,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2155.678969" Rows="70.000000" Width="18"/>
+              <dxl:Cost StartupCost="0" TotalCost="2155.679833" Rows="70.000000" Width="18"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="0"/>
@@ -529,7 +529,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="2155.677076" Rows="70.000000" Width="44"/>
+                <dxl:Cost StartupCost="0" TotalCost="2155.677939" Rows="70.000000" Width="44"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -571,7 +571,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
               <dxl:LimitOffset/>
               <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2155.632288" Rows="70.000000" Width="44"/>
+                  <dxl:Cost StartupCost="0" TotalCost="2155.633152" Rows="70.000000" Width="44"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -626,7 +626,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                 </dxl:HashExprList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2155.627467" Rows="70.000000" Width="44"/>
+                    <dxl:Cost StartupCost="0" TotalCost="2155.628331" Rows="70.000000" Width="44"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -658,7 +658,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                   <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="2155.627467" Rows="70.000000" Width="44"/>
+                      <dxl:Cost StartupCost="0" TotalCost="2155.628331" Rows="70.000000" Width="44"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="0"/>

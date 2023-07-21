@@ -32,6 +32,7 @@
 #include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
+#include "gpopt/operators/CPhysicalStreamAgg.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
@@ -619,14 +620,30 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 < dHashAggOutputTupWidthCostUnit);
 	GPOS_ASSERT(0 < dTupDefaultProcCostUnit);
 
-	DOUBLE num_rows_outer = pci->PdRows()[0];
+	// estimated intput rows per segment
+	DOUBLE num_input_rows = pci->PdRows()[0];
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
-	// streamAgg cost is correlated with rows and width of input tuples and rows and width of output tuples
-	CCost costLocal =
-		CCost(pci->NumRebinds() *
-			  (num_rows_outer * dWidthOuter * dTupDefaultProcCostUnit +
-			   pci->Rows() * pci->Width() * dHashAggOutputTupWidthCostUnit));
+	// Since we do not know the order of tuples received by local stream
+	// agg, we assume the number of output rows from local agg is  equal to
+	// the output rows multiplied by the number of segments.
+
+	// the cardinality out as rows * number_of_segments to increase the
+	// local stream agg cost
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows per segment
+	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
+	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
+		popAgg->FGeneratesDuplicates())
+	{
+		num_output_rows = num_output_rows * pcmgpdb->UlHosts();
+	}
+
+	// streamAgg cost is correlated with num_input_rows and width of input
+	// tuples and num_output_rows and width of output tuples CCost
+	CCost costLocal = CCost(
+		pci->NumRebinds() *
+		(num_input_rows * dWidthOuter * dTupDefaultProcCostUnit +
+		 num_output_rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 	return costLocal + costChild;
@@ -781,7 +798,8 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				COperator::EopPhysicalHashAggDeduplicate == op_id);
 #endif	// GPOS_DEBUG
 
-	DOUBLE num_rows_outer = pci->PdRows()[0];
+	// estimated intput rows per segment
+	DOUBLE num_input_rows = pci->PdRows()[0];
 
 	// A local hash agg may stream partial aggregates to global agg when it's hash table is full to avoid spilling.
 	// This is dertermined by the order of tuples received by local agg. In the worst case, the local hash agg may
@@ -791,15 +809,15 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// the number of groups.
 	//
 	// Since we do not know the order of tuples received by local hash agg, we assume the number of output rows from local
-	// agg is the average between input and output rows
+	// agg is  equal to the output rows multiplied by the number of segments.
 
 	// the cardinality out as rows * number_of_segments to increase the local hash agg cost
-	DOUBLE rows = pci->Rows();
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows per segment
 	CPhysicalHashAgg *popAgg = CPhysicalHashAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
 		popAgg->FGeneratesDuplicates())
 	{
-		rows = rows * pcmgpdb->UlHosts();
+		num_output_rows = num_output_rows * pcmgpdb->UlHosts();
 	}
 
 	// get the number of grouping columns
@@ -824,15 +842,18 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 < dHashAggOutputTupWidthCostUnit);
 
 	// hashAgg cost contains three parts: build hash table, aggregate tuples, and output tuples.
-	// 1. build hash table is correlated with the number of rows and width of input tuples and the number of columns used.
-	// 2. cost of aggregate tuples depends on the complexity of aggregation algorithm and thus is ignored.
-	// 3. cost of output tuples is correlated with rows and width of returning tuples.
-	CCost costLocal =
-		CCost(pci->NumRebinds() *
-			  (num_rows_outer * ulGrpCols * dHashAggInputTupColumnCostUnit +
-			   num_rows_outer * ulGrpCols * pci->Width() *
-				   dHashAggInputTupWidthCostUnit +
-			   rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
+	// 1. build hash table is correlated with the number of num_input_rows
+	// and width of input tuples and the number of columns used.
+	// 2. cost of aggregate tuples depends on the complexity of aggregation
+	// algorithm and thus is ignored.
+	// 3. cost of output tuples is correlated with num_output_rows and
+	// width of returning tuples.
+	CCost costLocal = CCost(
+		pci->NumRebinds() *
+		(num_input_rows * ulGrpCols * dHashAggInputTupColumnCostUnit +
+		 num_input_rows * ulGrpCols * pci->Width() *
+			 dHashAggInputTupWidthCostUnit +
+		 num_output_rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 
