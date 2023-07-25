@@ -620,17 +620,16 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 < dHashAggOutputTupWidthCostUnit);
 	GPOS_ASSERT(0 < dTupDefaultProcCostUnit);
 
-	// estimated intput rows per segment
-	DOUBLE num_input_rows = pci->PdRows()[0];
+	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
-	// Since we do not know the order of tuples received by local stream
-	// agg, we assume the number of output rows from local agg is  equal to
-	// the output rows multiplied by the number of segments.
-
-	// the cardinality out as rows * number_of_segments to increase the
-	// local stream agg cost
-	DOUBLE num_output_rows = pci->Rows();  // estimated output rows per segment
+	// To improve the local stream aggregation cost, we compute the
+	// cardinality out by multiplying the number of output rows
+	// (num_output_rows) with the number of segments.  This decision takes
+	// into account the uncertainty in the order of tuples received by
+	// local stream aggregation, leading to more accurate estimations in
+	// the query execution plan.
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
 		popAgg->FGeneratesDuplicates())
@@ -798,8 +797,7 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				COperator::EopPhysicalHashAggDeduplicate == op_id);
 #endif	// GPOS_DEBUG
 
-	// estimated intput rows per segment
-	DOUBLE num_input_rows = pci->PdRows()[0];
+	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 
 	// A local hash agg may stream partial aggregates to global agg when it's hash table is full to avoid spilling.
 	// This is dertermined by the order of tuples received by local agg. In the worst case, the local hash agg may
@@ -808,11 +806,13 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// by grouping columns, which allows it to complete all local aggregation in memory and produce exactly tuples as
 	// the number of groups.
 	//
-	// Since we do not know the order of tuples received by local hash agg, we assume the number of output rows from local
-	// agg is  equal to the output rows multiplied by the number of segments.
-
-	// the cardinality out as rows * number_of_segments to increase the local hash agg cost
-	DOUBLE num_output_rows = pci->Rows();  // estimated output rows per segment
+	// To improve the local hash aggregation cost, we compute the
+	// cardinality out by multiplying the number of output rows
+	// (num_output_rows) with the number of segments.  This decision takes
+	// into account the uncertainty in the order of tuples received by
+	// local hash aggregation, leading to more accurate estimations in the
+	// query execution plan.
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalHashAgg *popAgg = CPhysicalHashAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
 		popAgg->FGeneratesDuplicates())
