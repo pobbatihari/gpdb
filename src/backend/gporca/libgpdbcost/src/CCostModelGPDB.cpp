@@ -623,12 +623,13 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
-	// To improve the local stream aggregation cost, we compute the
-	// cardinality out by multiplying the number of output rows
-	// (num_output_rows) with the number of segments.  This decision takes
-	// into account the uncertainty in the order of tuples received by
-	// local stream aggregation, leading to more accurate estimations in
-	// the query execution plan.
+	//To improve the local stream aggregation cost, by considering the
+	//uncertainty in the order of tuples received by local hash agg, which
+	//can affect the cardinality. We set the cardinality out as an upper
+	//bound for the number of output rows. This is achieved by multiplying
+	//the number of output rows (num_output_rows) with the number of
+	//segments.
+
 	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
@@ -806,12 +807,13 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// by grouping columns, which allows it to complete all local aggregation in memory and produce exactly tuples as
 	// the number of groups.
 	//
-	// To improve the local hash aggregation cost, we compute the
-	// cardinality out by multiplying the number of output rows
-	// (num_output_rows) with the number of segments.  This decision takes
-	// into account the uncertainty in the order of tuples received by
-	// local hash aggregation, leading to more accurate estimations in the
-	// query execution plan.
+	//To improve the local hash aggregation cost, by considering the
+	//uncertainty in the order of tuples received by local hash agg, which
+	//can affect the cardinality. We set the cardinality out as an upper
+	//bound for the number of output rows. This is achieved by multiplying
+	//the number of output rows (num_output_rows) with the number of
+	//segments.
+
 	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalHashAgg *popAgg = CPhysicalHashAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
