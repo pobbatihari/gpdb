@@ -1130,6 +1130,8 @@ CTranslatorUtils::CreateGroupingSetsForRollup(CMemoryPool *mp,
 	CBitSetArray *col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
 	ListCell *lc = nullptr;
 	CBitSet *current_result = GPOS_NEW(mp) CBitSet(mp);
+	// add an empty set for grand total
+	col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp));
 	ForEach(lc, grouping_set->content)
 	{
 		GroupingSet *gs_current = (GroupingSet *) lfirst(lc);
@@ -1142,8 +1144,6 @@ CTranslatorUtils::CreateGroupingSetsForRollup(CMemoryPool *mp,
 		bset->Release();
 		col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp, *current_result));
 	}
-	// add an empty set
-	col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp));
 	current_result->Release();
 	return col_attnos_arr;
 }
