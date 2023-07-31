@@ -623,12 +623,15 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
-	// To improve the local stream aggregation cost, by considering the
-	// uncertainty in the order of tuples received by local hash agg, which
-	// can affect the cardinality. We set the cardinality out as an upper
-	// bound for the number of output rows. This is achieved by multiplying
-	// the number of output rows (num_output_rows) with the number of
-	// segments.
+	// In order to handle worst-case scenarios where grouping key tuples
+	// are distributed across segments, and to maintain accurate
+	// cardinality for local stream agg, it is crucial to ensure that the
+	// local stream agg's cardinality does not exceed the NDV of the
+	// grouping key in global agg (upper bound for the number of output
+	// rows). This is achieved by multiplying the global agg's cardinality
+	// of the grouping key with the number of segments. It can helps to
+	// maintain the cardinality for local stream agg in both best and
+	// worst-case scenarios.
 
 	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
@@ -800,19 +803,26 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 
-	// A local hash agg may stream partial aggregates to global agg when it's hash table is full to avoid spilling.
-	// This is dertermined by the order of tuples received by local agg. In the worst case, the local hash agg may
-	// see a tuple from each different group until its hash table fills up all available memory, and hence it produces
-	// tuples as many as its input size. On the other hand, in the best case, the local agg may receive tuples sorted
-	// by grouping columns, which allows it to complete all local aggregation in memory and produce exactly tuples as
-	// the number of groups.
+	// A local hash agg may stream partial aggregates to global agg when
+	// it's hash table is full to avoid spilling.  This is dertermined by
+	// the order of tuples received by local agg. In the worst case, the
+	// local hash agg may see a tuple from each different group until its
+	// hash table fills up all available memory, and hence it produces
+	// tuples as many as its input size. On the other hand, in the best
+	// case, the local agg may receive tuples sorted by grouping columns,
+	// which allows it to complete all local aggregation in memory and
+	// produce exactly tuples as the number of groups.
 	//
-	// To improve the local hash aggregation cost, by considering the
-	// uncertainty in the order of tuples received by local hash agg, which
-	// can affect the cardinality. We set the cardinality out as an upper
-	// bound for the number of output rows. This is achieved by multiplying
-	// the number of output rows (num_output_rows) with the number of
-	// segments.
+	// Considering the tuples of local hash agg fit within memory. To
+	// handle worst-case scenarios where the tuples of the grouping key are
+	// distributed across segments. To maintain accurate cardinality for
+	// local hash agg, its crucial to ensure that the cardinality of the
+	// local hash agg does not exceed the NDV of the grouping key in global
+	// aggs (upper bound for the number of output rows).  So we are
+	// achieving this by multiplying the global agg's cardinality of grouping
+	// key with the number of segments. It can help's to maintain the
+	// cardinality for local hash agg across both best and worst-case
+	// scenarios.
 
 	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalHashAgg *popAgg = CPhysicalHashAgg::PopConvert(exprhdl.Pop());
