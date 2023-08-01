@@ -122,8 +122,10 @@ GET_COLUMN_NAMES_SQL = """
 SELECT attname FROM pg_attribute WHERE attrelid = %s AND attnum > 0 AND NOT attisdropped
 """
 
-GET_TEMP_TABLE_NAMES_SQL = """
-select relname from pg_class where relpersistence = 't';
+GET_SCHEMA_WITH_TEMP_TABLE_SQL = """
+SELECT n.nspname
+FROM pg_class c, pg_namespace n
+WHERE c.relnamespace = n.oid AND c.relpersistence = 't';
 """
 
 GET_INCLUDED_COLUMNS_FROM_EXCLUDE_SQL = """
@@ -272,7 +274,6 @@ class AnalyzeDb(Operation):
         self.orca_rootstats = options.orca_rootstats
         self.gen_profile_only = options.gen_profile_only
         self.analyze_gucs = ANALYZE_GUCS
-        self.skip_temp_table = options.skip_temp_table
 
         self.success_list = []
 
@@ -632,15 +633,16 @@ class AnalyzeDb(Operation):
             tup = (schema_tbl[0], schema_tbl[1])
             mid_level_partitions.add(tup)
 
-        if self.skip_temp_table:
-            qresult = run_sql(self.conn, GET_TEMP_TABLE_NAMES_SQL)
-            temp_table_set = set([x[0] for x in qresult])
+        qresult = run_sql(self.conn, GET_SCHEMA_WITH_TEMP_TABLE_SQL)
+        tmp_schema = ''
+        if len(qresult) > 0:
+            tmp_schema = qresult[0][0]
 
         ret = set()
         for can in candidates:
             schema = can[0]
             table = can[1]
-            if self.skip_temp_table and table in temp_table_set:
+            if tmp_schema and schema == tmp_schema:
                 continue
             if '\n' in schema or ',' in schema or ':' in schema:
                 raise Exception('Schema name has an invalid character "\\n", ":", "," : "%s"' % schema)
@@ -1337,8 +1339,6 @@ def create_parser():
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Print debug messages.')
     parser.add_option('-a', action='store_true', dest='silent', default=False,
                       help="Quiet mode. Do not prompt for user confirmation.")
-    parser.add_option('--skip_temp_table', action='store_true', dest='skip_temp_table', default=False,
-                      help="Skip analyze on temp table.")
     return parser
 
 
