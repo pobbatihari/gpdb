@@ -634,15 +634,13 @@ class AnalyzeDb(Operation):
             mid_level_partitions.add(tup)
 
         qresult = run_sql(self.conn, GET_SCHEMA_WITH_TEMP_TABLE_SQL)
-        tmp_schema = ''
-        if len(qresult) > 0:
-            tmp_schema = qresult[0][0]
+        temp_schema_set = set([x[0] for x in qresult])
 
         ret = set()
         for can in candidates:
             schema = can[0]
             table = can[1]
-            if tmp_schema and schema == tmp_schema:
+            if schema in temp_schema_set:
                 continue
             if '\n' in schema or ',' in schema or ':' in schema:
                 raise Exception('Schema name has an invalid character "\\n", ":", "," : "%s"' % schema)
