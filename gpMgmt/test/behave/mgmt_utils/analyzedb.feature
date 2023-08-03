@@ -1774,3 +1774,4 @@ Feature: Incrementally analyze the database
         Then output should not contain "temp_t1"
         And the user runs "dropdb schema_with_temp_table"
         And the user drops the named connection "default"
+
