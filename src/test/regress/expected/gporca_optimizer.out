@@ -14433,21 +14433,17 @@ explain select c2 from quad_func_cast();
 (2 rows)
 
 explain select (c1).r from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
                             QUERY PLAN                             
 -------------------------------------------------------------------
- Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
+ Function Scan on quad_func_cast  (cost=0.00..0.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (2 rows)
 
 explain select (c2).i from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
                             QUERY PLAN                             
 -------------------------------------------------------------------
- Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
+ Function Scan on quad_func_cast  (cost=0.00..0.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (2 rows)
 
 select c1 from quad_func_cast();
@@ -14463,16 +14459,12 @@ select c2 from quad_func_cast();
 (1 row)
 
 select (c1).r from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
   r  
 -----
  1.1
 (1 row)
 
 select (c2).i from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
  i 
 ---
   

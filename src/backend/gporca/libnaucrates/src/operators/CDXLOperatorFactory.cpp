@@ -52,6 +52,7 @@
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
 #include "naucrates/dxl/operators/CDXLScalarComp.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarHashExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
@@ -963,6 +964,37 @@ CDXLOperatorFactory::MakeDXLArrayCoerceExpr(
 	return GPOS_NEW(mp)
 		CDXLScalarArrayCoerceExpr(mp, mdid_type, type_modifier,
 								  (EdxlCoercionForm) coercion_form, location);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLOperatorFactory::MakeDXLFieldSelectExpr
+//
+//	@doc:
+//		Construct a scalar FieldSelect expression
+//
+//---------------------------------------------------------------------------
+CDXLScalar *
+CDXLOperatorFactory::MakeDXLFieldSelect(CDXLMemoryManager *dxl_memory_manager,
+										const Attributes &attrs)
+{
+	CMemoryPool *mp = dxl_memory_manager->Pmp();
+
+	IMDId *field_mdid = ExtractConvertAttrValueToMdId(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectFieldType,
+		EdxltokenScalarFieldSelect);
+	IMDId *coll_mdid = ExtractConvertAttrValueToMdId(dxl_memory_manager, attrs,
+													 EdxltokenScalarFieldSelectCollId,
+													 EdxltokenScalarFieldSelect);
+	INT field_num = ExtractConvertAttrValueToInt(dxl_memory_manager, attrs,
+												 EdxltokenScalarFieldSelectFieldNum,
+												 EdxltokenScalarFieldSelect);
+	INT mode_type = ExtractConvertAttrValueToInt(dxl_memory_manager, attrs,
+												 EdxltokenScalarFieldSelectModeType,
+												 EdxltokenScalarFieldSelect);
+
+	return GPOS_NEW(mp)
+		CDXLScalarFieldSelect(mp, field_mdid, coll_mdid, mode_type, field_num);
 }
 
 //---------------------------------------------------------------------------

@@ -58,6 +58,7 @@
 #include "gpopt/operators/CScalarCoalesce.h"
 #include "gpopt/operators/CScalarCoerceToDomain.h"
 #include "gpopt/operators/CScalarCoerceViaIO.h"
+#include "gpopt/operators/CScalarFieldSelect.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIf.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
@@ -105,6 +106,7 @@
 #include "naucrates/dxl/operators/CDXLScalarCoerceToDomain.h"
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
 #include "naucrates/dxl/operators/CDXLScalarIfStmt.h"
@@ -2660,6 +2662,8 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *dxlnode)
 			return CTranslatorDXLToExpr::PexprValuesList(dxlnode);
 		case EdxlopScalarSortGroupClause:
 			return CTranslatorDXLToExpr::PexprSortGroupClause(dxlnode);
+		case EdxlopScalarFieldSelect:
+			return CTranslatorDXLToExpr::PexprFieldSelectToScalar(dxlnode);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   dxl_op->GetOpNameStr()->GetBuffer());
@@ -3328,6 +3332,39 @@ CTranslatorDXLToExpr::PexprValuesList(const CDXLNode *dxlnode)
 
 	return GPOS_NEW(m_mp)
 		CExpression(m_mp, popScalarValuesList, pdrgpexprChildren);
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToExpr::PexprFieldSelectToScalar
+//
+//	@doc:
+// 		Create a scalar FieldSelect operator expression from a DXL FieldSelect node
+//
+//---------------------------------------------------------------------------
+CExpression *
+CTranslatorDXLToExpr::PexprFieldSelectToScalar(const CDXLNode *dxlnode)
+{
+	CDXLScalarFieldSelect *dxl_op =
+		CDXLScalarFieldSelect::Cast(dxlnode->GetOperator());
+
+	IMDId *field_mdid = dxl_op->GetDXLFieldMDId();
+	field_mdid->AddRef();
+
+	IMDId *coll_mdid = dxl_op->GetDXLCollMDId();
+	coll_mdid->AddRef();
+
+	INT mode_type = dxl_op->GetDXLModeType();
+
+	USINT field_number = dxl_op->GetDXLFieldNumber();
+
+	CScalarFieldSelect *popFieldSelect = GPOS_NEW(m_mp) CScalarFieldSelect(
+		m_mp, field_mdid, coll_mdid, mode_type, field_number);
+
+	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
+
+	return GPOS_NEW(m_mp) CExpression(m_mp, popFieldSelect, pdrgpexprChildren);
 }
 
 //---------------------------------------------------------------------------
