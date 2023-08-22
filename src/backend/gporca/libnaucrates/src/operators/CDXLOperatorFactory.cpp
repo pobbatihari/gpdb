@@ -983,15 +983,15 @@ CDXLOperatorFactory::MakeDXLFieldSelect(CDXLMemoryManager *dxl_memory_manager,
 	IMDId *field_mdid = ExtractConvertAttrValueToMdId(
 		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectFieldType,
 		EdxltokenScalarFieldSelect);
-	IMDId *coll_mdid = ExtractConvertAttrValueToMdId(dxl_memory_manager, attrs,
-													 EdxltokenScalarFieldSelectCollId,
-													 EdxltokenScalarFieldSelect);
-	INT field_num = ExtractConvertAttrValueToInt(dxl_memory_manager, attrs,
-												 EdxltokenScalarFieldSelectFieldNum,
-												 EdxltokenScalarFieldSelect);
-	INT mode_type = ExtractConvertAttrValueToInt(dxl_memory_manager, attrs,
-												 EdxltokenScalarFieldSelectModeType,
-												 EdxltokenScalarFieldSelect);
+	IMDId *coll_mdid = ExtractConvertAttrValueToMdId(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectCollId,
+		EdxltokenScalarFieldSelect);
+	INT field_num = ExtractConvertAttrValueToInt(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectFieldNum,
+		EdxltokenScalarFieldSelect);
+	INT mode_type = ExtractConvertAttrValueToInt(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectModeType,
+		EdxltokenScalarFieldSelect);
 
 	return GPOS_NEW(mp)
 		CDXLScalarFieldSelect(mp, field_mdid, coll_mdid, mode_type, field_num);

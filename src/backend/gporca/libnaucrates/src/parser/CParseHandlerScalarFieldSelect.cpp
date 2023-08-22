@@ -53,9 +53,9 @@ CParseHandlerScalarFieldSelect::StartElement(
 	const XMLCh *const,	 // element_qname
 	const Attributes &attrs)
 {
-	if (0 ==
-		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarFieldSelect),
-								 element_local_name))
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarFieldSelect),
+				 element_local_name))
 	{
 		if (nullptr != m_dxl_node)
 		{
@@ -106,9 +106,9 @@ CParseHandlerScalarFieldSelect::EndElement(
 	const XMLCh *const	// element_qname
 )
 {
-	if (0 !=
-		XMLString::compareString(CDXLTokens::XmlstrToken(EdxltokenScalarFieldSelect),
-								 element_local_name))
+	if (0 != XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenScalarFieldSelect),
+				 element_local_name))
 	{
 		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);

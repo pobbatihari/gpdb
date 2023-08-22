@@ -160,9 +160,11 @@ CDXLScalarFieldSelect::SerializeToDXL(CXMLSerializer *xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectModeType),
 		m_output_type_mode);
 	m_result_coll_mdid->Serialize(
-		xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectCollId));
+		xml_serializer,
+		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectCollId));
 	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectFieldNum), m_field_num);
+		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectFieldNum),
+		m_field_num);
 
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
 
