@@ -3469,6 +3469,30 @@ select a from mix_func_cast();
 select b from mix_func_cast();
 select c from mix_func_cast();
 
+----------------------------------
+-- Test ORCA support for FIELDSELECT
+----------------------------------
+drop type if exists comp_type;
+drop table if exists comp_table;
+create type comp_type as ( a text, b numeric, c int, d float, e int);
+create table comp_table(id int, item comp_type) distributed by (id);
+
+insert into comp_table values (1, ROW('GP', 10.5, 10, 10.5, 20));
+insert into comp_table values (2, ROW('VM',20.5, 20, 10.5, 20));
+insert into comp_table values (3, ROW('DB',null, 10, 10.5, 10));
+
+select sum((item).b) from comp_table where (item).c=20;
+explain select sum((item).b) from comp_table where (item).c=20;
+
+select (item).a from comp_table where (item).c=20 and (item).e >10;
+explain select (item).a from comp_table where (item).c=20 and (item).e >10;
+
+select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
+explain select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
+
+drop table comp_table;
+drop type comp_type;
+
 -- the query with empty CTE producer target list should fall back to Postgres
 -- optimizer without any error on build without asserts
 drop table if exists empty_cte_tl_test;

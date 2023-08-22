@@ -14511,6 +14511,68 @@ select c from mix_func_cast();
  t
 (1 row)
 
+----------------------------------
+-- Test ORCA support for FIELDSELECT
+----------------------------------
+drop type if exists comp_type;
+NOTICE:  type "comp_type" does not exist, skipping
+drop table if exists comp_table;
+NOTICE:  table "comp_table" does not exist, skipping
+create type comp_type as ( a text, b numeric, c int, d float, e int);
+create table comp_table(id int, item comp_type) distributed by (id);
+insert into comp_table values (1, ROW('GP', 10.5, 10, 10.5, 20));
+insert into comp_table values (2, ROW('VM',20.5, 20, 10.5, 20));
+insert into comp_table values (3, ROW('DB',null, 10, 10.5, 10));
+select sum((item).b) from comp_table where (item).c=20;
+ sum  
+------
+ 20.5
+(1 row)
+
+explain select sum((item).b) from comp_table where (item).c=20;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..431.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+         ->  Seq Scan on comp_table  (cost=0.00..431.00 rows=1 width=8)
+               Filter: ((item).c = 20)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select (item).a from comp_table where (item).c=20 and (item).e >10;
+ a  
+----
+ VM
+(1 row)
+
+explain select (item).a from comp_table where (item).c=20 and (item).e >10;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+   ->  Seq Scan on comp_table  (cost=0.00..431.00 rows=1 width=8)
+         Filter: (((item).c = 20) AND ((item).e > 10))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
+ id | a  |  b   | c  |  d   | e  
+----+----+------+----+------+----
+  3 | DB |      | 10 | 10.5 | 10
+  1 | GP | 10.5 | 10 | 10.5 | 20
+(2 rows)
+
+explain select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Result  (cost=0.00..431.00 rows=1 width=36)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+         ->  Seq Scan on comp_table  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (((item).c)::double precision <= (item).d)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+drop table comp_table;
+drop type comp_type;
 -- the query with empty CTE producer target list should fall back to Postgres
 -- optimizer without any error on build without asserts
 drop table if exists empty_cte_tl_test;
