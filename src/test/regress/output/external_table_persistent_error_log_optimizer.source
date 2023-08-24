@@ -39,8 +39,8 @@ NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related
 (2 rows)
 
 SELECT (gp_read_persistent_error_log('ext_error_persistent')).errmsg;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: unsupported exec location
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: unsupported exec location
                 errmsg                 
 ---------------------------------------
  extra data after last expected column
@@ -79,8 +79,8 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 (1 row)
 
 SELECT (gp_read_persistent_error_log('ext_error_persistent')).errmsg;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: unsupported exec location
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: unsupported exec location
                 errmsg                 
 ---------------------------------------
  extra data after last expected column

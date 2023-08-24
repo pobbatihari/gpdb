@@ -14529,14 +14529,14 @@ select sum((item).b) from comp_table where (item).c=20;
  20.5
 (1 row)
 
-explain select sum((item).b) from comp_table where (item).c=20;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-         ->  Seq Scan on comp_table  (cost=0.00..431.00 rows=1 width=8)
+explain (costs off) select sum((item).b) from comp_table where (item).c=20;
+                   QUERY PLAN                   
+------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on comp_table
                Filter: ((item).c = 20)
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (5 rows)
 
 select (item).a from comp_table where (item).c=20 and (item).e >10;
@@ -14545,13 +14545,13 @@ select (item).a from comp_table where (item).c=20 and (item).e >10;
  VM
 (1 row)
 
-explain select (item).a from comp_table where (item).c=20 and (item).e >10;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-   ->  Seq Scan on comp_table  (cost=0.00..431.00 rows=1 width=8)
+explain (costs off) select (item).a from comp_table where (item).c=20 and (item).e >10;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on comp_table
          Filter: (((item).c = 20) AND ((item).e > 10))
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (4 rows)
 
 select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
@@ -14561,14 +14561,14 @@ select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table wher
   1 | GP | 10.5 | 10 | 10.5 | 20
 (2 rows)
 
-explain select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Result  (cost=0.00..431.00 rows=1 width=36)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-         ->  Seq Scan on comp_table  (cost=0.00..431.00 rows=1 width=12)
+explain (costs off) select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Result
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on comp_table
                Filter: (((item).c)::double precision <= (item).d)
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (5 rows)
 
 drop table comp_table;

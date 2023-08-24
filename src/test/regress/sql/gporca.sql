@@ -3482,13 +3482,13 @@ insert into comp_table values (2, ROW('VM',20.5, 20, 10.5, 20));
 insert into comp_table values (3, ROW('DB',null, 10, 10.5, 10));
 
 select sum((item).b) from comp_table where (item).c=20;
-explain select sum((item).b) from comp_table where (item).c=20;
+explain (costs off) select sum((item).b) from comp_table where (item).c=20;
 
 select (item).a from comp_table where (item).c=20 and (item).e >10;
-explain select (item).a from comp_table where (item).c=20 and (item).e >10;
+explain (costs off) select (item).a from comp_table where (item).c=20 and (item).e >10;
 
 select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
-explain select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
+explain (costs off) select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
 
 drop table comp_table;
 drop type comp_type;

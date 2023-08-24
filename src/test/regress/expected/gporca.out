@@ -14437,15 +14437,15 @@ select sum((item).b) from comp_table where (item).c=20;
  20.5
 (1 row)
 
-explain select sum((item).b) from comp_table where (item).c=20;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=240.78..240.79 rows=1 width=32)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=240.71..240.76 rows=3 width=32)
-         ->  Partial Aggregate  (cost=240.71..240.72 rows=1 width=32)
-               ->  Seq Scan on comp_table  (cost=0.00..240.67 rows=17 width=32)
+explain (costs off) select sum((item).b) from comp_table where (item).c=20;
+                   QUERY PLAN                   
+------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on comp_table
                      Filter: ((item).c = 20)
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (6 rows)
 
 select (item).a from comp_table where (item).c=20 and (item).e >10;
@@ -14454,13 +14454,13 @@ select (item).a from comp_table where (item).c=20 and (item).e >10;
  VM
 (1 row)
 
-explain select (item).a from comp_table where (item).c=20 and (item).e >10;
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..282.38 rows=29 width=32)
-   ->  Seq Scan on comp_table  (cost=0.00..282.00 rows=10 width=32)
+explain (costs off) select (item).a from comp_table where (item).c=20 and (item).e >10;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on comp_table
          Filter: (((item).e > 10) AND ((item).c = 20))
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (4 rows)
 
 select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
@@ -14470,13 +14470,13 @@ select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table wher
   1 | GP | 10.5 | 10 | 10.5 | 20
 (2 rows)
 
-explain select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..502.44 rows=16533 width=84)
-   ->  Seq Scan on comp_table  (cost=0.00..282.00 rows=5511 width=84)
+explain (costs off) select id, (item).a, (item).b, (item).c, (item).d, (item).e from comp_table where (item).c<=(item).d;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on comp_table
          Filter: (((item).c)::double precision <= (item).d)
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (4 rows)
 
 drop table comp_table;
