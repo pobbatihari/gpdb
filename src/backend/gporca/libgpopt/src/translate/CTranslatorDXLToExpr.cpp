@@ -2663,7 +2663,7 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *dxlnode)
 		case EdxlopScalarSortGroupClause:
 			return CTranslatorDXLToExpr::PexprSortGroupClause(dxlnode);
 		case EdxlopScalarFieldSelect:
-			return CTranslatorDXLToExpr::PexprFieldSelectToScalar(dxlnode);
+			return CTranslatorDXLToExpr::PexprFieldSelect(dxlnode);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   dxl_op->GetOpNameStr()->GetBuffer());
@@ -3337,14 +3337,14 @@ CTranslatorDXLToExpr::PexprValuesList(const CDXLNode *dxlnode)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorDXLToExpr::PexprFieldSelectToScalar
+//		CTranslatorDXLToExpr::PexprFieldSelect
 //
 //	@doc:
 // 		Create a scalar FieldSelect operator expression from a DXL FieldSelect node
 //
 //---------------------------------------------------------------------------
 CExpression *
-CTranslatorDXLToExpr::PexprFieldSelectToScalar(const CDXLNode *dxlnode)
+CTranslatorDXLToExpr::PexprFieldSelect(const CDXLNode *dxlnode)
 {
 	CDXLScalarFieldSelect *dxl_op =
 		CDXLScalarFieldSelect::Cast(dxlnode->GetOperator());

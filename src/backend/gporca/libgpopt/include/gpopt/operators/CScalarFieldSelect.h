@@ -6,7 +6,7 @@
 //		CScalarFieldSelect.h
 //
 //	@doc:
-//		Class for representing  FIELDSELECT
+//		Class for representing FIELDSELECT
 //---------------------------------------------------------------------------
 
 #ifndef GPOPT_CSCALARFIELDSELECT_H
@@ -81,7 +81,7 @@ public:
 
 	// field collation mdid
 	IMDId *
-	GetColl_Id() const
+	GetCollationId() const
 	{
 		return m_coll_mdid;
 	}

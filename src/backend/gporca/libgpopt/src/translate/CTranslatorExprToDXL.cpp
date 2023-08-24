@@ -6565,7 +6565,7 @@ CTranslatorExprToDXL::PdxlnFieldSelect(CExpression *pexpr)
 	GPOS_ASSERT(nullptr != pexpr);
 	CScalarFieldSelect *pop = CScalarFieldSelect::PopConvert(pexpr->Pop());
 
-	IMDId *coll_mdid = pop->GetColl_Id();
+	IMDId *coll_mdid = pop->GetCollationId();
 	coll_mdid->AddRef();
 	IMDId *field_mdid = pop->MdidType();
 	field_mdid->AddRef();
