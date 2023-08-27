@@ -34,23 +34,24 @@ class CDXLScalarFieldSelect : public CDXLScalar
 {
 private:
 	// type of the field
-	IMDId *m_result_field_mdid;
+	IMDId *m_dxl_field_type;
 
 	// collation OID of the field
-	IMDId *m_result_coll_mdid;
+	IMDId *m_dxl_field_collation;
 
 	// output typmod (usually -1)
-	INT m_output_type_mode;
+	INT m_dxl_type_modifier;
 
 	// attribute number of field to extract
-	USINT m_field_num;
+	USINT m_dxl_field_number;
 
 public:
 	CDXLScalarFieldSelect(const CDXLScalarFieldSelect &) = delete;
 
 	// ctor/dtor
-	CDXLScalarFieldSelect(CMemoryPool *mp, IMDId *field_mdid, IMDId *coll_mdid,
-						  INT mode_type, INT field_num);
+	CDXLScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
+						  IMDId *field_collation, INT type_modifier,
+						  INT field_number);
 
 	~CDXLScalarFieldSelect() override;
 
@@ -65,13 +66,13 @@ public:
 						const CDXLNode *dxlnode) const override;
 
 	// mdid of the field
-	IMDId *GetDXLFieldMDId() const;
+	IMDId *GetDXLFieldType() const;
 
 	// collation mdid of the field
-	IMDId *GetDXLCollMDId() const;
+	IMDId *GetDXLFieldCollation() const;
 
 	// output type mode
-	INT GetDXLModeType() const;
+	INT GetDXLTypeModifier() const;
 
 	// attribute number of the field
 	USINT GetDXLFieldNumber() const;

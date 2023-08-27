@@ -26,16 +26,17 @@ using namespace gpdxl;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLScalarFieldSelect::CDXLScalarFieldSelect(CMemoryPool *mp, IMDId *field_mdid,
-											 IMDId *coll_mdid, INT mode_type,
-											 INT field_num)
+CDXLScalarFieldSelect::CDXLScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
+											 IMDId *field_collation,
+											 INT type_modifier,
+											 INT field_number)
 	: CDXLScalar(mp),
-	  m_result_field_mdid(field_mdid),
-	  m_result_coll_mdid(coll_mdid),
-	  m_output_type_mode(mode_type),
-	  m_field_num(field_num)
+	  m_dxl_field_type(field_type),
+	  m_dxl_field_collation(field_collation),
+	  m_dxl_type_modifier(type_modifier),
+	  m_dxl_field_number(field_number)
 {
-	GPOS_ASSERT(m_result_field_mdid->IsValid());
+	GPOS_ASSERT(m_dxl_field_type->IsValid());
 }
 
 //---------------------------------------------------------------------------
@@ -48,8 +49,8 @@ CDXLScalarFieldSelect::CDXLScalarFieldSelect(CMemoryPool *mp, IMDId *field_mdid,
 //---------------------------------------------------------------------------
 CDXLScalarFieldSelect::~CDXLScalarFieldSelect()
 {
-	m_result_field_mdid->Release();
-	m_result_coll_mdid->Release();
+	m_dxl_field_type->Release();
+	m_dxl_field_collation->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -68,49 +69,49 @@ CDXLScalarFieldSelect::GetDXLOperator() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLScalarFieldSelect::GetDXLFieldMDId
+//		CDXLScalarFieldSelect::GetDXLFieldType
 //
 //	@doc:
 //		Returns mdid of the field
 //
 //---------------------------------------------------------------------------
 IMDId *
-CDXLScalarFieldSelect::GetDXLFieldMDId() const
+CDXLScalarFieldSelect::GetDXLFieldType() const
 {
-	return m_result_field_mdid;
+	return m_dxl_field_type;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLScalarFieldSelect::GetDXLCollMDId
+//		CDXLScalarFieldSelect::GetDXLFieldCollation
 //
 //	@doc:
 //		Returns collation mdid of the field
 //
 //---------------------------------------------------------------------------
 IMDId *
-CDXLScalarFieldSelect::GetDXLCollMDId() const
+CDXLScalarFieldSelect::GetDXLFieldCollation() const
 {
-	return m_result_coll_mdid;
+	return m_dxl_field_collation;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLScalarFieldSelect::GetDXLModeType
+//		CDXLScalarFieldSelect::GetDXLFieldTypeModifier
 //
 //	@doc:
 //		Returns output type mode
 //
 //---------------------------------------------------------------------------
 INT
-CDXLScalarFieldSelect::GetDXLModeType() const
+CDXLScalarFieldSelect::GetDXLTypeModifier() const
 {
-	return m_output_type_mode;
+	return m_dxl_type_modifier;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLScalarFieldSelect::ReturnsSet
+//		CDXLScalarFieldSelect::GetDXLFieldNumber()
 //
 //	@doc:
 //		Returns attribute number of the field to extract
@@ -119,7 +120,7 @@ CDXLScalarFieldSelect::GetDXLModeType() const
 USINT
 CDXLScalarFieldSelect::GetDXLFieldNumber() const
 {
-	return m_field_num;
+	return m_dxl_field_number;
 }
 
 //---------------------------------------------------------------------------
@@ -153,18 +154,18 @@ CDXLScalarFieldSelect::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
-	m_result_field_mdid->Serialize(
+	m_dxl_field_type->Serialize(
 		xml_serializer,
 		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectFieldType));
-	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectModeType),
-		m_output_type_mode);
-	m_result_coll_mdid->Serialize(
+	m_dxl_field_collation->Serialize(
 		xml_serializer,
-		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectCollId));
+		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectFieldCollation));
 	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectFieldNum),
-		m_field_num);
+		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectTypeModifier),
+		m_dxl_type_modifier);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenScalarFieldSelectFieldNumber),
+		m_dxl_field_number);
 
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
 

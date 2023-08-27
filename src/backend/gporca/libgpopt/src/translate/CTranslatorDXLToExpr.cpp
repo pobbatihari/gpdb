@@ -3349,19 +3349,15 @@ CTranslatorDXLToExpr::PexprFieldSelect(const CDXLNode *dxlnode)
 	CDXLScalarFieldSelect *dxl_op =
 		CDXLScalarFieldSelect::Cast(dxlnode->GetOperator());
 
-	IMDId *field_mdid = dxl_op->GetDXLFieldMDId();
-	field_mdid->AddRef();
-
-	IMDId *coll_mdid = dxl_op->GetDXLCollMDId();
-	coll_mdid->AddRef();
-
-	INT mode_type = dxl_op->GetDXLModeType();
-
+	IMDId *field_type = dxl_op->GetDXLFieldType();
+	field_type->AddRef();
+	IMDId *field_collation = dxl_op->GetDXLFieldCollation();
+	field_collation->AddRef();
+	INT type_modifier = dxl_op->GetDXLTypeModifier();
 	USINT field_number = dxl_op->GetDXLFieldNumber();
 
 	CScalarFieldSelect *popFieldSelect = GPOS_NEW(m_mp) CScalarFieldSelect(
-		m_mp, field_mdid, coll_mdid, mode_type, field_number);
-
+		m_mp, field_type, field_collation, type_modifier, field_number);
 	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
 
 	return GPOS_NEW(m_mp) CExpression(m_mp, popFieldSelect, pdrgpexprChildren);

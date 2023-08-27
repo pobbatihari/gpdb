@@ -249,14 +249,14 @@
       <dxl:LogicalProject>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="name">
-            <dxl:FIELDSELECT FieldType="0.25.1.0" ModeType="-1" CollID="0.100.1.0" FieldNum="1">
+            <dxl:FIELDSELECT FieldType="0.25.1.0" TypeModifier="-1" FieldCollation="0.100.1.0" FieldNumber="1">
               <dxl:Ident ColId="1" ColName="item" TypeMdid="0.17387.1.0"/>
             </dxl:FIELDSELECT>
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalSelect>
           <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1756.1.0">
-            <dxl:FIELDSELECT FieldType="0.1700.1.0" ModeType="-1" CollID="0.0.0.0" FieldNum="3">
+            <dxl:FIELDSELECT FieldType="0.1700.1.0" TypeModifier="-1" FieldCollation="0.0.0.0" FieldNumber="3">
               <dxl:Ident ColId="1" ColName="item" TypeMdid="0.17387.1.0"/>
             </dxl:FIELDSELECT>
             <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAABgCA" DoubleValue="0.000000"/>
@@ -297,7 +297,7 @@
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="name">
-              <dxl:FIELDSELECT FieldType="0.25.1.0" ModeType="-1" CollID="0.100.1.0" FieldNum="1">
+              <dxl:FIELDSELECT FieldType="0.25.1.0" TypeModifier="-1" FieldCollation="0.100.1.0" FieldNumber="1">
                 <dxl:Ident ColId="0" ColName="item" TypeMdid="0.17387.1.0"/>
               </dxl:FIELDSELECT>
             </dxl:ProjElem>
@@ -315,7 +315,7 @@
             </dxl:ProjList>
             <dxl:Filter>
               <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1756.1.0">
-                <dxl:FIELDSELECT FieldType="0.1700.1.0" ModeType="-1" CollID="0.0.0.0" FieldNum="3">
+                <dxl:FIELDSELECT FieldType="0.1700.1.0" TypeModifier="-1" FieldCollation="0.0.0.0" FieldNumber="3">
                   <dxl:Ident ColId="0" ColName="item" TypeMdid="0.17387.1.0"/>
                 </dxl:FIELDSELECT>
                 <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAABgCA" DoubleValue="0.000000"/>

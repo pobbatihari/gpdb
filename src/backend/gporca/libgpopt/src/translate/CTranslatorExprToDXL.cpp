@@ -6565,18 +6565,19 @@ CTranslatorExprToDXL::PdxlnFieldSelect(CExpression *pexpr)
 	GPOS_ASSERT(nullptr != pexpr);
 	CScalarFieldSelect *pop = CScalarFieldSelect::PopConvert(pexpr->Pop());
 
-	IMDId *coll_mdid = pop->GetCollationId();
-	coll_mdid->AddRef();
-	IMDId *field_mdid = pop->MdidType();
-	field_mdid->AddRef();
+	IMDId *field_type = pop->MdidType();
+	field_type->AddRef();
+	IMDId *field_collation = pop->CollationId();
+	field_collation->AddRef();
+	INT type_modifier = pop->TypeModifier();
 	USINT field_number = pop->FieldNumber();
-	INT mode_type = pop->ModeType();
 
 	CDXLNode *pdxlnFieldSelect = GPOS_NEW(m_mp) CDXLNode(
-		m_mp, GPOS_NEW(m_mp) CDXLScalarFieldSelect(m_mp, field_mdid, coll_mdid,
-												   mode_type, field_number));
-
+		m_mp,
+		GPOS_NEW(m_mp) CDXLScalarFieldSelect(m_mp, field_type, field_collation,
+											 type_modifier, field_number));
 	TranslateScalarChildren(pexpr, pdxlnFieldSelect);
+
 	return pdxlnFieldSelect;
 }
 

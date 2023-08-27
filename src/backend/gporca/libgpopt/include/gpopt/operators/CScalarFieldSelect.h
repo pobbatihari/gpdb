@@ -34,23 +34,24 @@ class CScalarFieldSelect : public CScalar
 {
 private:
 	// type of the field
-	IMDId *m_field_mdid;
+	IMDId *m_field_type;
 
 	// collation OID of the field
-	IMDId *m_coll_mdid;
+	IMDId *m_field_collation;
 
 	// output typmod (usually -1)
-	INT m_mode_type;
+	INT m_type_modifier;
 
 	// attribute number of field to extract
-	USINT m_field_num;
+	USINT m_field_number;
 
 public:
 	CScalarFieldSelect(const CScalarFieldSelect &) = delete;
 
 	// ctor/dtor
-	CScalarFieldSelect(CMemoryPool *mp, IMDId *field_mdid, IMDId *coll_mdid,
-					   INT mode_type, USINT field_num);
+	CScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
+					   IMDId *field_collation, INT type_modifier,
+					   USINT field_number);
 
 	~CScalarFieldSelect() override;
 
@@ -76,28 +77,28 @@ public:
 	IMDId *
 	MdidType() const override
 	{
-		return m_field_mdid;
+		return m_field_type;
 	}
 
 	// field collation mdid
 	IMDId *
-	GetCollationId() const
+	CollationId() const
 	{
-		return m_coll_mdid;
+		return m_field_collation;
 	}
 
 	// output mode type
 	INT
-	ModeType() const
+	TypeModifier() const override
 	{
-		return m_mode_type;
+		return m_type_modifier;
 	}
 
 	// attribute number of field
 	USINT
 	FieldNumber() const
 	{
-		return m_field_num;
+		return m_field_number;
 	}
 
 	// conversion function

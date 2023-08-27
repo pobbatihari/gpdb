@@ -227,9 +227,10 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenScalarFieldSelect, GPOS_WSZ_LIT("FIELDSELECT")},
 		{EdxltokenScalarFieldSelectFieldType, GPOS_WSZ_LIT("FieldType")},
-		{EdxltokenScalarFieldSelectCollId, GPOS_WSZ_LIT("CollID")},
-		{EdxltokenScalarFieldSelectFieldNum, GPOS_WSZ_LIT("FieldNum")},
-		{EdxltokenScalarFieldSelectModeType, GPOS_WSZ_LIT("ModeType")},
+		{EdxltokenScalarFieldSelectFieldCollation,
+		 GPOS_WSZ_LIT("FieldCollation")},
+		{EdxltokenScalarFieldSelectFieldNumber, GPOS_WSZ_LIT("FieldNumber")},
+		{EdxltokenScalarFieldSelectTypeModifier, GPOS_WSZ_LIT("TypeModifier")},
 
 		{EdxltokenScalarArray, GPOS_WSZ_LIT("Array")},
 		{EdxltokenScalarArrayRef, GPOS_WSZ_LIT("ArrayRef")},

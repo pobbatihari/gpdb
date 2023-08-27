@@ -26,15 +26,15 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CScalarFieldSelect::CScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
-									   IMDId *coll_id, INT mode_type,
-									   USINT field_number)
+									   IMDId *field_collation,
+									   INT type_modifier, USINT field_number)
 	: CScalar(mp),
-	  m_field_mdid(field_type),
-	  m_coll_mdid(coll_id),
-	  m_mode_type(mode_type),
-	  m_field_num(field_number)
+	  m_field_type(field_type),
+	  m_field_collation(field_collation),
+	  m_type_modifier(type_modifier),
+	  m_field_number(field_number)
 {
-	GPOS_ASSERT(m_field_mdid->IsValid());
+	GPOS_ASSERT(m_field_type->IsValid());
 }
 
 //---------------------------------------------------------------------------
@@ -47,8 +47,8 @@ CScalarFieldSelect::CScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
 //---------------------------------------------------------------------------
 CScalarFieldSelect::~CScalarFieldSelect()
 {
-	m_field_mdid->Release();
-	m_coll_mdid->Release();
+	m_field_type->Release();
+	m_field_collation->Release();
 }
 
 
@@ -71,6 +71,7 @@ CScalarFieldSelect::Matches(COperator *pop) const
 
 	// match attribute field number and type of the field
 	return popFieldSelect->MdidType()->Equals(MdidType()) &&
+		   popFieldSelect->CollationId()->Equals(CollationId()) &&
 		   popFieldSelect->FieldNumber() == FieldNumber();
 }
 

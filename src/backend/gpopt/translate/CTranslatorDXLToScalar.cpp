@@ -2142,10 +2142,10 @@ CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar(
 		TranslateDXLToScalar((*scalar_field_select)[0], colid_var);
 	fieldSelect->fieldnum = dxlop->GetDXLFieldNumber();
 	fieldSelect->resulttype =
-		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldMDId())->Oid();
-	fieldSelect->resulttypmod = dxlop->GetDXLModeType();
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldType())->Oid();
+	fieldSelect->resulttypmod = dxlop->GetDXLTypeModifier();
 	fieldSelect->resultcollid =
-		CMDIdGPDB::CastMdid(dxlop->GetDXLCollMDId())->Oid();
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldCollation())->Oid();
 
 	return (Expr *) fieldSelect;
 }

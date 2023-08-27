@@ -271,9 +271,9 @@ enum Edxltoken
 	// FIELDSELECT
 	EdxltokenScalarFieldSelect,
 	EdxltokenScalarFieldSelectFieldType,
-	EdxltokenScalarFieldSelectCollId,
-	EdxltokenScalarFieldSelectFieldNum,
-	EdxltokenScalarFieldSelectModeType,
+	EdxltokenScalarFieldSelectFieldCollation,
+	EdxltokenScalarFieldSelectFieldNumber,
+	EdxltokenScalarFieldSelectTypeModifier,
 
 	EdxltokenValue,
 	EdxltokenTypeId,
