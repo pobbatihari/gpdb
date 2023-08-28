@@ -69,6 +69,9 @@ public:
 		return "CScalarFieldSelect";
 	}
 
+	// operator specific hash function
+	ULONG HashValue() const override;
+
 	// match function
 	BOOL Matches(COperator *pop) const override;
 
@@ -82,7 +85,7 @@ public:
 
 	// field collation mdid
 	IMDId *
-	CollationId() const
+	FieldCollation() const
 	{
 		return m_field_collation;
 	}

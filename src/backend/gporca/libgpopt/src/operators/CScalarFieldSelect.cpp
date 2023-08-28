@@ -51,6 +51,21 @@ CScalarFieldSelect::~CScalarFieldSelect()
 	m_field_collation->Release();
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CScalarFieldSelect::HashValue
+//
+//	@doc:
+//		Operator specific hash function
+//
+//---------------------------------------------------------------------------
+ULONG
+CScalarFieldSelect::HashValue() const
+{
+	return gpos::CombineHashes(COperator::HashValue(),
+							   CombineHashes(m_field_type->HashValue(),
+											 m_field_collation->HashValue()));
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -71,7 +86,7 @@ CScalarFieldSelect::Matches(COperator *pop) const
 
 	// match attribute field number and type of the field
 	return popFieldSelect->MdidType()->Equals(MdidType()) &&
-		   popFieldSelect->CollationId()->Equals(CollationId()) &&
+		   popFieldSelect->FieldCollation()->Equals(FieldCollation()) &&
 		   popFieldSelect->FieldNumber() == FieldNumber();
 }
 

@@ -6567,7 +6567,7 @@ CTranslatorExprToDXL::PdxlnFieldSelect(CExpression *pexpr)
 
 	IMDId *field_type = pop->MdidType();
 	field_type->AddRef();
-	IMDId *field_collation = pop->CollationId();
+	IMDId *field_collation = pop->FieldCollation();
 	field_collation->AddRef();
 	INT type_modifier = pop->TypeModifier();
 	USINT field_number = pop->FieldNumber();

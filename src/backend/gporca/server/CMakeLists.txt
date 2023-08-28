@@ -398,7 +398,7 @@ SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf CompositeT
 CScalarFuncPushDownTest:
 ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;
 
-CScalarFieldSelectTest:
+CScalarTest:
 FieldSelect;
 
 COrderedAggTest:
