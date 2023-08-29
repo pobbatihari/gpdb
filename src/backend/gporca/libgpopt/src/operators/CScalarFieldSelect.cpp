@@ -62,9 +62,11 @@ CScalarFieldSelect::~CScalarFieldSelect()
 ULONG
 CScalarFieldSelect::HashValue() const
 {
-	return gpos::CombineHashes(COperator::HashValue(),
-							   CombineHashes(m_field_type->HashValue(),
-											 m_field_collation->HashValue()));
+	return gpos::CombineHashes(
+		COperator::HashValue(),
+		CombineHashes(CombineHashes(m_field_type->HashValue(),
+									m_field_collation->HashValue()),
+					  gpos::HashValue<USINT>(&m_field_number)));
 }
 
 //---------------------------------------------------------------------------
