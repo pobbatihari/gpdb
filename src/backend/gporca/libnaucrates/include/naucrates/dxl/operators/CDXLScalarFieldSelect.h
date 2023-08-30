@@ -43,7 +43,7 @@ private:
 	INT m_dxl_type_modifier;
 
 	// attribute number of field to extract
-	USINT m_dxl_field_number;
+	SINT m_dxl_field_number;
 
 public:
 	CDXLScalarFieldSelect(const CDXLScalarFieldSelect &) = delete;
@@ -51,7 +51,7 @@ public:
 	// ctor/dtor
 	CDXLScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
 						  IMDId *field_collation, INT type_modifier,
-						  INT field_number);
+						  SINT field_number);
 
 	~CDXLScalarFieldSelect() override;
 
@@ -75,7 +75,7 @@ public:
 	INT GetDXLTypeModifier() const;
 
 	// attribute number of the field
-	USINT GetDXLFieldNumber() const;
+	SINT GetDXLFieldNumber() const;
 
 	// conversion function
 	static CDXLScalarFieldSelect *

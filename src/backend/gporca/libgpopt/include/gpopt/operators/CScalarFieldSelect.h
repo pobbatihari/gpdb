@@ -43,7 +43,7 @@ private:
 	INT m_type_modifier;
 
 	// attribute number of field to extract
-	USINT m_field_number;
+	SINT m_field_number;
 
 public:
 	CScalarFieldSelect(const CScalarFieldSelect &) = delete;
@@ -51,7 +51,7 @@ public:
 	// ctor/dtor
 	CScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
 					   IMDId *field_collation, INT type_modifier,
-					   USINT field_number);
+					   SINT field_number);
 
 	~CScalarFieldSelect() override;
 
@@ -98,7 +98,7 @@ public:
 	}
 
 	// attribute number of field
-	USINT
+	SINT
 	FieldNumber() const
 	{
 		return m_field_number;

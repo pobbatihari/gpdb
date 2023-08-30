@@ -989,7 +989,7 @@ CDXLOperatorFactory::MakeDXLFieldSelect(CDXLMemoryManager *dxl_memory_manager,
 	INT type_modifier = ExtractConvertAttrValueToInt(
 		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectTypeModifier,
 		EdxltokenScalarFieldSelect);
-	INT field_number = ExtractConvertAttrValueToInt(
+	SINT field_number = ExtractConvertAttrValueToInt(
 		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectFieldNumber,
 		EdxltokenScalarFieldSelect);
 

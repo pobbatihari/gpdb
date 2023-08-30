@@ -27,7 +27,7 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CScalarFieldSelect::CScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
 									   IMDId *field_collation,
-									   INT type_modifier, USINT field_number)
+									   INT type_modifier, SINT field_number)
 	: CScalar(mp),
 	  m_field_type(field_type),
 	  m_field_collation(field_collation),
@@ -66,7 +66,7 @@ CScalarFieldSelect::HashValue() const
 		COperator::HashValue(),
 		CombineHashes(CombineHashes(m_field_type->HashValue(),
 									m_field_collation->HashValue()),
-					  gpos::HashValue<USINT>(&m_field_number)));
+					  gpos::HashValue<SINT>(&m_field_number)));
 }
 
 //---------------------------------------------------------------------------

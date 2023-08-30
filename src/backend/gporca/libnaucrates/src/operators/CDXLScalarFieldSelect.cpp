@@ -29,7 +29,7 @@ using namespace gpdxl;
 CDXLScalarFieldSelect::CDXLScalarFieldSelect(CMemoryPool *mp, IMDId *field_type,
 											 IMDId *field_collation,
 											 INT type_modifier,
-											 INT field_number)
+											 SINT field_number)
 	: CDXLScalar(mp),
 	  m_dxl_field_type(field_type),
 	  m_dxl_field_collation(field_collation),
@@ -117,7 +117,7 @@ CDXLScalarFieldSelect::GetDXLTypeModifier() const
 //		Returns attribute number of the field to extract
 //
 //---------------------------------------------------------------------------
-USINT
+SINT
 CDXLScalarFieldSelect::GetDXLFieldNumber() const
 {
 	return m_dxl_field_number;

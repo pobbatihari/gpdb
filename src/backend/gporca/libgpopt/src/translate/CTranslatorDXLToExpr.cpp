@@ -3354,7 +3354,7 @@ CTranslatorDXLToExpr::PexprFieldSelect(const CDXLNode *dxlnode)
 	IMDId *field_collation = dxl_op->GetDXLFieldCollation();
 	field_collation->AddRef();
 	INT type_modifier = dxl_op->GetDXLTypeModifier();
-	USINT field_number = dxl_op->GetDXLFieldNumber();
+	SINT field_number = dxl_op->GetDXLFieldNumber();
 
 	CScalarFieldSelect *popFieldSelect = GPOS_NEW(m_mp) CScalarFieldSelect(
 		m_mp, field_type, field_collation, type_modifier, field_number);

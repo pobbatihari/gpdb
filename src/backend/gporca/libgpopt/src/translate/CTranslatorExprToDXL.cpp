@@ -6570,7 +6570,7 @@ CTranslatorExprToDXL::PdxlnFieldSelect(CExpression *pexpr)
 	IMDId *field_collation = pop->FieldCollation();
 	field_collation->AddRef();
 	INT type_modifier = pop->TypeModifier();
-	USINT field_number = pop->FieldNumber();
+	SINT field_number = pop->FieldNumber();
 
 	CDXLNode *pdxlnFieldSelect = GPOS_NEW(m_mp) CDXLNode(
 		m_mp,
