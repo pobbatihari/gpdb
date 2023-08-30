@@ -14,13 +14,15 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarCmp.h"
 
 using namespace gpopt;
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -37,6 +39,20 @@ CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
 						hash_opfamilies, is_null_aware, origin_xform)
 {
+	ULONG ulDistrReqs = 4 + NumDistrReq();
+	SetDistrRequests(ulDistrReqs);
+
+	CPhysicalJoin *physical_join = dynamic_cast<CPhysicalJoin *>(this);
+	if ((GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
+		 GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2)) ||
+		physical_join->OriginXform() == CXform::ExfExpandNAryJoinGreedy)
+	{
+		SetPartPropagateRequests(2);
+	}
+	else
+	{
+		SetPartPropagateRequests(1);
+	}
 }
 
 
@@ -50,6 +66,88 @@ CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 //---------------------------------------------------------------------------
 CPhysicalInnerHashJoin::~CPhysicalInnerHashJoin() = default;
 
+
+CEnfdDistribution *
+CPhysicalInnerHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							CReqdPropPlan *prppInput, ULONG child_index,
+							CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq)
+{
+	GPOS_ASSERT(2 > child_index);
+	GPOS_ASSERT(ulOptReq < UlDistrRequests());
+
+	CEnfdDistribution::EDistributionMatching dmatch =
+		Edm(prppInput, child_index, pdrgpdpCtxt, ulOptReq);
+	CDistributionSpec *const pdsInput = prppInput->Ped()->PdsRequired();
+
+	// if expression has to execute on a single host then we need a gather
+	if (exprhdl.NeedsSingletonExecution())
+	{
+		return GPOS_NEW(mp) CEnfdDistribution(
+			PdsRequireSingleton(mp, exprhdl, pdsInput, child_index), dmatch);
+	}
+
+	if (exprhdl.HasOuterRefs())
+	{
+		if (CDistributionSpec::EdtSingleton == pdsInput->Edt() ||
+			CDistributionSpec::EdtStrictReplicated == pdsInput->Edt())
+		{
+			return GPOS_NEW(mp) CEnfdDistribution(
+				PdsPassThru(mp, exprhdl, pdsInput, child_index), dmatch);
+		}
+		return GPOS_NEW(mp)
+			CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecReplicated(
+								  CDistributionSpec::EdtStrictReplicated),
+							  dmatch);
+	}
+
+	const ULONG ulHashDistributeRequests = NumDistrReq();
+	;
+	if (ulOptReq < ulHashDistributeRequests)
+	{
+		// requests 1 .. N are (redistribute, redistribute)
+		CDistributionSpec *pds = PdsRequiredRedistribute(
+			mp, exprhdl, pdsInput, child_index, pdrgpdpCtxt, ulOptReq);
+		if (CDistributionSpec::EdtHashed == pds->Edt())
+		{
+			CDistributionSpecHashed *pdsHashed =
+				CDistributionSpecHashed::PdsConvert(pds);
+			pdsHashed->ComputeEquivHashExprs(mp, exprhdl);
+		}
+		return GPOS_NEW(mp) CEnfdDistribution(pds, dmatch);
+	}
+
+	if (ulOptReq == ulHashDistributeRequests ||
+		ulOptReq == ulHashDistributeRequests + 1)
+	{
+		// requests N+1, N+2 are (hashed/non-singleton, replicate)
+
+		CDistributionSpec *pds =
+			PdsRequiredReplicate(mp, exprhdl, pdsInput, child_index,
+								 pdrgpdpCtxt, ulOptReq, prppInput);
+		if (CDistributionSpec::EdtHashed == pds->Edt())
+		{
+			CDistributionSpecHashed *pdsHashed =
+				CDistributionSpecHashed::PdsConvert(pds);
+			pdsHashed->ComputeEquivHashExprs(mp, exprhdl);
+		}
+		return GPOS_NEW(mp) CEnfdDistribution(pds, dmatch);
+	}
+
+	if (ulOptReq == ulHashDistributeRequests + 2)
+	{
+		// requests N+3 is (singleton, singleton)
+		return GPOS_NEW(mp)
+			CEnfdDistribution(PdsRequiredSingleton(mp, exprhdl, pdsInput,
+												   child_index, pdrgpdpCtxt),
+							  dmatch);
+	}
+	GPOS_ASSERT(ulOptReq == ulHashDistributeRequests + 3);
+	// requests N+4 is (broadcast, non-singleton)
+	return GPOS_NEW(mp) CEnfdDistribution(
+		PdsRequiredNonSingleton(mp, exprhdl, pdsInput, child_index, pdrgpdpCtxt,
+								ulOptReq, prppInput),
+		dmatch);
+}
 
 //---------------------------------------------------------------------------
 //	@function:

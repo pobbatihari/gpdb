@@ -483,7 +483,62 @@ CPhysicalHashJoin::PdsRequiredSingleton(CMemoryPool *mp,
 	return CPhysical::PdssMatching(
 		mp, CDistributionSpecSingleton::PdssConvert(pdsFirst));
 }
+//
+//---------------------------------------------------------------------------
+//	@function:
+//		CPhysicalHashJoin::PdsRequiredNonSingleton
+//
+//	@doc:
+//		Create (broadcast, non-singleton) optimization request
+//
+//
+//---------------------------------------------------------------------------
+CDistributionSpec *
+CPhysicalHashJoin::PdsRequiredNonSingleton(
+	CMemoryPool *mp, CExpressionHandle &exprhdl, CDistributionSpec *,
+	ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq,
+	CReqdPropPlan *prppInput)
+{
+	EChildExecOrder eceo = Eceo();
+	if (EceoLeftToRight == eceo)
+	{
+		// if optimization order is left to right, fall-back to implementation of parent Join operator
+		CEnfdDistribution *ped = CPhysicalJoin::Ped(
+			mp, exprhdl, prppInput, child_index, pdrgpdpCtxt, ulOptReq);
+		CDistributionSpec *pds = ped->PdsRequired();
+		pds->AddRef();
+		SafeRelease(ped);
+		return pds;
+	}
+	GPOS_ASSERT(EceoRightToLeft == eceo);
 
+	if (1 == child_index)
+	{
+		// require inner child to be non-singleton
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+	}
+	GPOS_ASSERT(0 == child_index);
+
+	// require a matching distribution from outer child
+	CDistributionSpec *pdsInner =
+		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
+	GPOS_ASSERT(nullptr != pdsInner);
+
+	if (CDistributionSpec::EdtUniversal == pdsInner->Edt())
+	{
+		// first child is universal, request second child to execute on a single host to avoid duplicates
+		return GPOS_NEW(mp) CDistributionSpecSingleton();
+	}
+
+	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
+	{
+		// first child is strict replicated, request second child to execute non-singleton
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+	}
+
+	return GPOS_NEW(mp)
+		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -723,7 +778,6 @@ CPhysicalHashJoin::PdsRequiredRedistribute(CMemoryPool *mp,
 // 		Req(N + 1) (hashed, broadcast)
 // 		Req(N + 2) (non-singleton, broadcast)
 // 		Req(N + 3) (singleton, singleton)
-//
 //		we always check the distribution delivered by the first child (as
 //		given by child optimization order), and then match the delivered
 //		distribution on the second child
