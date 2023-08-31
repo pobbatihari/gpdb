@@ -150,6 +150,8 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		 &CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar},
 		{EdxlopScalarSortGroupClause,
 		 &CTranslatorDXLToScalar::TranslateDXLScalarSortGroupClauseToScalar},
+		{EdxlopScalarFieldSelect,
+		 &CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar},
 	};
 
 	const ULONG num_translators = GPOS_ARRAY_SIZE(translators);
@@ -2179,6 +2181,37 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayRefToScalar(
 	}
 
 	return (Expr *) array_ref;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar
+//
+//	@doc:
+//		Translates a DXL Scalar FieldSelect into a GPDB FieldSelect node
+//
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar(
+	const CDXLNode *scalar_field_select, CMappingColIdVar *colid_var)
+{
+	GPOS_ASSERT(NULL != scalar_field_select);
+
+	CDXLScalarFieldSelect *dxlop =
+		CDXLScalarFieldSelect::Cast(scalar_field_select->GetOperator());
+
+	FieldSelect *fieldSelect = MakeNode(FieldSelect);
+
+	fieldSelect->arg =
+		TranslateDXLToScalar((*scalar_field_select)[0], colid_var);
+	fieldSelect->fieldnum = dxlop->GetDXLFieldNumber();
+	fieldSelect->resulttype =
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldType())->Oid();
+	fieldSelect->resulttypmod = dxlop->GetDXLTypeModifier();
+	fieldSelect->resultcollid =
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldCollation())->Oid();
+
+	return (Expr *) fieldSelect;
 }
 
 //---------------------------------------------------------------------------

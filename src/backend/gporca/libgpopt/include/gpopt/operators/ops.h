@@ -36,6 +36,7 @@
 #include "gpopt/operators/CScalarCoerceViaIO.h"
 #include "gpopt/operators/CScalarConst.h"
 #include "gpopt/operators/CScalarDMLAction.h"
+#include "gpopt/operators/CScalarFieldSelect.h"
 #include "gpopt/operators/CScalarFunc.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIf.h"

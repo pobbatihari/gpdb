@@ -186,6 +186,8 @@ public:
 		EopScalarBitmapIndexProbe,
 		EopScalarBitmapBoolOp,
 
+		EopScalarFieldSelect,
+
 		EopPhysicalTableScan,
 		EopPhysicalExternalScan,
 		EopPhysicalIndexScan,

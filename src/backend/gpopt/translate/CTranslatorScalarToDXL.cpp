@@ -271,7 +271,8 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		{T_ArrayExpr, &CTranslatorScalarToDXL::TranslateArrayExprToDXL},
 		{T_ArrayRef, &CTranslatorScalarToDXL::TranslateArrayRefToDXL},
 		{T_SortGroupClause,
-		 &CTranslatorScalarToDXL::TranslateSortGroupClauseToDXL}};
+		 &CTranslatorScalarToDXL::TranslateSortGroupClauseToDXL},
+		{T_FieldSelect, &CTranslatorScalarToDXL::TranslateFieldSelectToDXL}};
 
 	const ULONG num_translators = GPOS_ARRAY_SIZE(translators);
 	NodeTag tag = expr->type;
@@ -1178,6 +1179,39 @@ CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
 	return dxlnode;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorScalarToDXL::TranslateFieldSelectToDXL
+//
+//	@doc:
+//		Create a DXL node for a scalar FieldSelect from a GPDB FieldSelect
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorScalarToDXL::TranslateFieldSelectToDXL(
+	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+{
+	GPOS_ASSERT(IsA(expr, FieldSelect));
+
+	const FieldSelect *fieldselect = (FieldSelect *) expr;
+	GPOS_ASSERT(NULL != fieldselect->arg);
+
+	CDXLNode *child_node =
+		TranslateScalarToDXL(fieldselect->arg, var_colid_mapping);
+	GPOS_ASSERT(NULL != child_node);
+
+	// create the DXL node holding the scalar boolean operator
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
+		m_mp, GPOS_NEW(m_mp) CDXLScalarFieldSelect(
+				  m_mp,
+				  GPOS_NEW(m_mp)
+					  CMDIdGPDB(IMDId::EmdidGeneral, fieldselect->resulttype),
+				  GPOS_NEW(m_mp)
+					  CMDIdGPDB(IMDId::EmdidGeneral, fieldselect->resultcollid),
+				  fieldselect->resulttypmod, fieldselect->fieldnum));
+
+	dxlnode->AddChild(child_node);
+	return dxlnode;
+}
 
 
 //---------------------------------------------------------------------------

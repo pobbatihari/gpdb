@@ -200,6 +200,8 @@ CTranslatorDXLToExpr::InitTranslators()
 		{EdxlopScalarValuesList, &gpopt::CTranslatorDXLToExpr::PexprValuesList},
 		{EdxlopScalarSortGroupClause,
 		 &gpopt::CTranslatorDXLToExpr::PexprSortGroupClause},
+		{EdxlopScalarFieldSelect,
+		 &gpopt::CTranslatorDXLToExpr::PexprFieldSelect},
 	};
 
 	const ULONG translators_mapping_len = GPOS_ARRAY_SIZE(translators_mapping);
@@ -3244,6 +3246,35 @@ CTranslatorDXLToExpr::PexprValuesList(const CDXLNode *dxlnode)
 
 	return GPOS_NEW(m_mp)
 		CExpression(m_mp, popScalarValuesList, pdrgpexprChildren);
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToExpr::PexprFieldSelect
+//
+//	@doc:
+// 		Create a scalar FieldSelect operator expression from a DXL FieldSelect node
+//
+//---------------------------------------------------------------------------
+CExpression *
+CTranslatorDXLToExpr::PexprFieldSelect(const CDXLNode *dxlnode)
+{
+	CDXLScalarFieldSelect *dxl_op =
+		CDXLScalarFieldSelect::Cast(dxlnode->GetOperator());
+
+	IMDId *field_type = dxl_op->GetDXLFieldType();
+	field_type->AddRef();
+	IMDId *field_collation = dxl_op->GetDXLFieldCollation();
+	field_collation->AddRef();
+	INT type_modifier = dxl_op->GetDXLTypeModifier();
+	SINT field_number = dxl_op->GetDXLFieldNumber();
+
+	CScalarFieldSelect *popFieldSelect = GPOS_NEW(m_mp) CScalarFieldSelect(
+		m_mp, field_type, field_collation, type_modifier, field_number);
+	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
+
+	return GPOS_NEW(m_mp) CExpression(m_mp, popFieldSelect, pdrgpexprChildren);
 }
 
 //---------------------------------------------------------------------------

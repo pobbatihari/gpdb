@@ -139,6 +139,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerScalarConstValue.o \
               CParseHandlerScalarDMLAction.o \
               CParseHandlerScalarExpr.o \
+              CParseHandlerScalarFieldSelect.o \
               CParseHandlerScalarFuncExpr.o \
               CParseHandlerScalarIdent.o \
               CParseHandlerScalarIfStmt.o \
