@@ -3764,13 +3764,13 @@ EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=24)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
-         Hash Cond: qp_non_eq_b.f = qp_non_eq_a.f
-         ->  Seq Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
+         Hash Cond: (qp_non_eq_a.f = qp_non_eq_b.f)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+               ->  Seq Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
+                     Filter: ((f)::text <> '-0'::text)
          ->  Hash  (cost=431.00..431.00 rows=1 width=12)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-                     ->  Seq Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
-                           Filter: f::text <> '-0'::text
- Optimizer: Pivotal Optimizer (GPORCA) version 2.72.0
+               ->  Seq Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer: GPORCA
 (9 rows)
 
 SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
@@ -3785,13 +3785,13 @@ EXPLAIN SELECT * FROM qp_non_eq_a INNER JOIN qp_non_eq_b ON qp_non_eq_a.f = qp_n
 -------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=24)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=24)
-         Hash Cond: qp_non_eq_a.f = qp_non_eq_b.f
-         ->  Seq Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
+         Hash Cond: (qp_non_eq_b.f = qp_non_eq_a.f)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+               ->  Seq Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
+                     Filter: (CASE WHEN ((f)::text = '-0'::text) THEN '1'::double precision ELSE '-1'::double precision END < '0'::double precision)
          ->  Hash  (cost=431.00..431.00 rows=1 width=12)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-                     ->  Seq Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
-                           Filter: CASE WHEN f::text = '-0'::text THEN 1::double precision ELSE (-1)::double precision END < 0::double precision
- Optimizer: Pivotal Optimizer (GPORCA) version 2.72.0
+               ->  Seq Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer: GPORCA
 (9 rows)
 
 SELECT * FROM qp_non_eq_a INNER JOIN qp_non_eq_b ON qp_non_eq_a.f = qp_non_eq_b.f AND CASE WHEN qp_non_eq_b.f::text = '-0' THEN 1 ELSE -1::float8 END < '0';

@@ -63,12 +63,12 @@ EXPLAIN SELECT
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.01 rows=75 width=8)
    ->  Hash Join  (cost=0.00..862.01 rows=25 width=8)
-         Hash Cond: (t2.c22 = t1.c12)
-         ->  Seq Scan on t2  (cost=0.00..431.00 rows=9 width=4)
-         ->  Hash  (cost=431.00..431.00 rows=25 width=4)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=25 width=4)
-                     ->  Seq Scan on t1  (cost=0.00..431.00 rows=9 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
+         Hash Cond: (t1.c12 = t2.c22)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=25 width=4)
+               ->  Seq Scan on t1  (cost=0.00..431.00 rows=9 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=9 width=4)
+               ->  Seq Scan on t2  (cost=0.00..431.00 rows=9 width=4)
+ Optimizer: GPORCA
 (8 rows)
 
 -- Verify ORCA chooses broadcast over redistribution for skewed multiple joins 
@@ -107,10 +107,10 @@ EXPLAIN SELECT
          Hash Cond: (t2.c22 = t3.c32)
          ->  Hash Join  (cost=0.00..862.01 rows=25 width=8)
                Hash Cond: (t1.c12 = t2.c22)
-               ->  Seq Scan on t1  (cost=0.00..431.00 rows=9 width=4)
-               ->  Hash  (cost=431.00..431.00 rows=27 width=4)
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=27 width=4)
-                           ->  Seq Scan on t2  (cost=0.00..431.00 rows=9 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=25 width=4)
+                     ->  Seq Scan on t1  (cost=0.00..431.00 rows=9 width=4)
+               ->  Hash  (cost=431.00..431.00 rows=9 width=4)
+                     ->  Seq Scan on t2  (cost=0.00..431.00 rows=9 width=4)
          ->  Hash  (cost=431.00..431.00 rows=21 width=4)
                ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=21 width=4)
                      ->  Seq Scan on t3  (cost=0.00..431.00 rows=7 width=4)
@@ -170,12 +170,12 @@ EXPLAIN SELECT
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.01 rows=126 width=8)
    ->  Hash Join  (cost=0.00..862.01 rows=42 width=8)
-         Hash Cond: (t3.c32 = t4.c42)
-         ->  Seq Scan on t3  (cost=0.00..431.00 rows=7 width=4)
-         ->  Hash  (cost=431.00..431.00 rows=18 width=4)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=18 width=4)
-                     ->  Seq Scan on t4  (cost=0.00..431.00 rows=6 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
+         Hash Cond: (t4.c42 = t3.c32)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=18 width=4)
+               ->  Seq Scan on t4  (cost=0.00..431.00 rows=6 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=7 width=4)
+               ->  Seq Scan on t3  (cost=0.00..431.00 rows=7 width=4)
+ Optimizer: GPORCA
 (8 rows)
 
 -- reset skew factor
@@ -250,12 +250,12 @@ EXPLAIN SELECT
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.01 rows=75 width=8)
    ->  Hash Join  (cost=0.00..862.01 rows=25 width=8)
-         Hash Cond: (t2.c22 = t1.c12)
-         ->  Seq Scan on t2  (cost=0.00..431.00 rows=9 width=4)
-         ->  Hash  (cost=431.00..431.00 rows=25 width=4)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=25 width=4)
-                     ->  Seq Scan on t1  (cost=0.00..431.00 rows=9 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
+         Hash Cond: (t1.c12 = t2.c22)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=25 width=4)
+               ->  Seq Scan on t1  (cost=0.00..431.00 rows=9 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=9 width=4)
+               ->  Seq Scan on t2  (cost=0.00..431.00 rows=9 width=4)
+ Optimizer: GPORCA
 (8 rows)
 
 reset optimizer_skew_factor;

@@ -510,16 +510,16 @@ analyze	foo;
 analyze	bar;
 set optimizer_enable_motion_redistribute=off;
 explain delete from foo using bar where foo.b=bar.b;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Delete on foo  (cost=0.00..862.56 rows=4 width=1)
-   ->  Hash Join  (cost=0.00..862.27 rows=10 width=18)
-         Hash Cond: (foo.b = bar.b)
-         ->  Seq Scan on foo  (cost=0.00..431.00 rows=10 width=18)
-         ->  Hash  (cost=431.08..431.08 rows=3000 width=4)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.08 rows=3000 width=4)
-                     ->  Seq Scan on bar  (cost=0.00..431.01 rows=334 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Delete on foo  (cost=0.00..862.55 rows=4 width=1)
+   ->  Hash Join  (cost=0.00..862.26 rows=10 width=18)
+         Hash Cond: (bar.b = foo.b)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.08 rows=3000 width=4)
+               ->  Seq Scan on bar  (cost=0.00..431.01 rows=334 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=10 width=18)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=10 width=18)
+ Optimizer: GPORCA
 (8 rows)
 
 delete from foo using bar where foo.b=bar.b;
@@ -588,11 +588,11 @@ explain insert into foo select bar.a from bar, jazz where bar.a=jazz.a;
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=12)
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
                      Hash Cond: (bar.a = jazz.a)
-                     ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                 ->  Seq Scan on jazz  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
+                           ->  Seq Scan on jazz  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: GPORCA
 (10 rows)
 
 insert into foo select bar.a from bar, jazz where bar.a=jazz.a;
