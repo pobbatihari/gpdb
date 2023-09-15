@@ -498,10 +498,10 @@ this query isn't eligible for DPE.
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="7">
+    <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000737" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000665" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -521,7 +521,7 @@ this query isn't eligible for DPE.
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000647" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000576" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -547,9 +547,9 @@ this query isn't eligible for DPE.
               <dxl:Ident ColId="10" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+          <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000033" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000229" Rows="3.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -561,11 +561,6 @@ this query isn't eligible for DPE.
             </dxl:ProjList>
             <dxl:Filter/>
             <dxl:SortingColumnList/>
-            <dxl:HashExprList>
-              <dxl:HashExpr Opfamily="0.427.1.0">
-                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.1043.1.0" TypeModifier="5"/>
-              </dxl:HashExpr>
-            </dxl:HashExprList>
             <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="12"/>
@@ -597,10 +592,10 @@ this query isn't eligible for DPE.
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:DynamicTableScan>
-          </dxl:RedistributeMotion>
-          <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+          </dxl:BroadcastMotion>
+          <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000033" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="a">
@@ -611,44 +606,24 @@ this query isn't eligible for DPE.
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:SortingColumnList/>
-            <dxl:HashExprList>
-              <dxl:HashExpr Opfamily="0.427.1.0">
-                <dxl:Ident ColId="10" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5"/>
-              </dxl:HashExpr>
-            </dxl:HashExprList>
-            <dxl:DynamicTableScan SelectorIds="">
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="12"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="9" Alias="a">
-                  <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="10" Alias="b">
-                  <dxl:Ident ColId="10" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:Partitions>
-                <dxl:Partition Mdid="6.16397.1.0"/>
-                <dxl:Partition Mdid="6.16400.1.0"/>
-              </dxl:Partitions>
-              <dxl:TableDescriptor Mdid="6.16394.1.0" TableName="t4" LockMode="1">
-                <dxl:Columns>
-                  <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="1"/>
-                  <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="12" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="13" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="14" Attno="-4" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="15" Attno="-5" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="16" Attno="-6" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="17" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:DynamicTableScan>
-          </dxl:RedistributeMotion>
+            <dxl:Partitions>
+              <dxl:Partition Mdid="6.16397.1.0"/>
+              <dxl:Partition Mdid="6.16400.1.0"/>
+            </dxl:Partitions>
+            <dxl:TableDescriptor Mdid="6.16394.1.0" TableName="t4" LockMode="1">
+              <dxl:Columns>
+                <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="1"/>
+                <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                <dxl:Column ColId="12" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="13" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="14" Attno="-4" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="15" Attno="-5" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="16" Attno="-6" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                <dxl:Column ColId="17" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+              </dxl:Columns>
+            </dxl:TableDescriptor>
+          </dxl:DynamicTableScan>
         </dxl:HashJoin>
       </dxl:GatherMotion>
     </dxl:Plan>

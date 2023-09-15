@@ -669,7 +669,7 @@ WHERE t1.id1 = t2.id1;
         </dxl:LogicalJoin>
       </dxl:LogicalUpdate>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="17">
+    <dxl:Plan Id="0" SpaceSize="38">
       <dxl:DMLUpdate Columns="0,1" ActionCol="27" CtidCol="2" SegmentIdCol="8" IsSplitUpdate="true">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="4755.378785" Rows="60001.000000" Width="1"/>

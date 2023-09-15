@@ -698,7 +698,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalUpdate>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="20">
+    <dxl:Plan Id="0" SpaceSize="26">
       <dxl:DMLUpdate Columns="18,1" ActionCol="19" CtidCol="2" SegmentIdCol="8" IsSplitUpdate="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="864.385336" Rows="100.000001" Width="1"/>
