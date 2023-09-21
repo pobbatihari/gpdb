@@ -340,7 +340,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="837">
+    <dxl:Plan Id="0" SpaceSize="1089">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6896.001505" Rows="1.000000" Width="4"/>
@@ -436,7 +436,7 @@
                       <dxl:ProjElem ColId="25" Alias="count">
                         <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Ident ColId="30" ColName="ColRef_0030" TypeMdid="0.20.1.0"/>
+                            <dxl:Ident ColId="30" ColName="ColRef_0030" TypeMdid="0.20.1.0"/>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>

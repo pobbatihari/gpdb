@@ -307,11 +307,11 @@ explain (costs off) select * from legacy_enum a inner join legacy_enum b on a.co
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: ((legacy_enum.color)::anyenum = (legacy_enum_1.color)::anyenum)
-         ->  Seq Scan on legacy_enum
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on legacy_enum
          ->  Hash
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on legacy_enum legacy_enum_1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.41.0
+               ->  Seq Scan on legacy_enum legacy_enum_1
+ Optimizer: GPORCA
 (8 rows)
 
 select * from legacy_enum a inner join legacy_enum b on a.color = b.color;
@@ -441,14 +441,14 @@ select distinct test_array from try_distinct_array;
 
 -- Hash join on column that does not have legacy hashop
 explain (costs off) select * from try_distinct_array a, try_distinct_array b where a.test_array=b.test_array;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Hash Join
-   Hash Cond: ((try_distinct_array.test_array)::anyarray = (try_distinct_array_1.test_array)::anyarray)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Seq Scan on try_distinct_array
-   ->  Hash
-         ->  Gather Motion 3:1  (slice2; segments: 3)
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((try_distinct_array.test_array)::anyarray = (try_distinct_array_1.test_array)::anyarray)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on try_distinct_array
+         ->  Hash
                ->  Seq Scan on try_distinct_array try_distinct_array_1
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)

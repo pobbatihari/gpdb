@@ -484,6 +484,67 @@ CPhysicalHashJoin::PdsRequiredSingleton(CMemoryPool *mp,
 		mp, CDistributionSpecSingleton::PdssConvert(pdsFirst));
 }
 
+//
+//---------------------------------------------------------------------------
+//	@function:
+//		CPhysicalHashJoin::PdsRequiredOuterReplicated
+//
+//	@doc:
+//		Create (replicate, non-replicate) optimization request
+//
+//
+//---------------------------------------------------------------------------
+CDistributionSpec *
+CPhysicalHashJoin::PdsRequiredOuterReplicated(
+	CMemoryPool *mp, CExpressionHandle &exprhdl, CDistributionSpec *,
+	ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq,
+	CReqdPropPlan *prppInput)
+{
+	EChildExecOrder eceo = Eceo();
+	if (EceoLeftToRight == eceo)
+	{
+		// if optimization order is left to right, fall-back to
+		// implementation of parent Join operator
+		CEnfdDistribution *ped = CPhysicalJoin::Ped(
+			mp, exprhdl, prppInput, child_index, pdrgpdpCtxt, ulOptReq);
+		CDistributionSpec *pds = ped->PdsRequired();
+		pds->AddRef();
+		SafeRelease(ped);
+		return pds;
+	}
+	GPOS_ASSERT(EceoRightToLeft == eceo);
+
+	if (1 == child_index)
+	{
+		// require inner child to be non-singleton
+		return GPOS_NEW(mp) CDistributionSpecNonReplicated();
+	}
+	GPOS_ASSERT(0 == child_index);
+
+	// require a matching distribution from outer child
+	CDistributionSpec *pdsInner =
+		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
+	GPOS_ASSERT(nullptr != pdsInner);
+
+	if (CDistributionSpec::EdtUniversal == pdsInner->Edt() ||
+		CDistributionSpec::EdtSingleton == pdsInner->Edt())
+	{
+		// first child is universal/singleton, request second child to execute on
+		// a single host to avoid duplicates
+		return GPOS_NEW(mp) CDistributionSpecSingleton();
+	}
+
+	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
+	{
+		// first child is StrictReplicated, request second child to
+		// execute non-singleton
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+	}
+
+	// otherwise, request second child to deliver Replicated distribution
+	return GPOS_NEW(mp)
+		CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
+}
 
 //---------------------------------------------------------------------------
 //	@function:

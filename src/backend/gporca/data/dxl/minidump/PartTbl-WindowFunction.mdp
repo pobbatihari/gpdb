@@ -823,7 +823,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="4">
+    <dxl:Plan Id="0" SpaceSize="6">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="952.936690" Rows="10000.000000" Width="20"/>
@@ -982,7 +982,7 @@
               <dxl:SortingColumnList>
                 <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
               </dxl:SortingColumnList>
-              <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="Nulls">
+              <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="Nulls" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
                 <dxl:TrailingEdge TrailingBoundary="BoundedPreceding">
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                 </dxl:TrailingEdge>

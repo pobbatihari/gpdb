@@ -3949,7 +3949,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="80990">
+    <dxl:Plan Id="0" SpaceSize="117318">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="3397460.370461" Rows="19136.250000" Width="31"/>
@@ -4184,7 +4184,7 @@
                           </dxl:Cast>
                         </dxl:Comparison>
                       </dxl:HashCondList>
-                      <dxl:DynamicTableScan SelectorIds="10">
+                      <dxl:DynamicTableScan SelectorIds="12">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
                         </dxl:Properties>
@@ -4258,7 +4258,7 @@
                         </dxl:TableScan>
                       </dxl:BroadcastMotion>
                     </dxl:HashJoin>
-                    <dxl:PartitionSelector RelationMdid="6.328475.1.1" SelectorId="10" ScanId="1" Partitions="0,1,2,3">
+                    <dxl:PartitionSelector RelationMdid="6.328475.1.1" SelectorId="12" ScanId="1" Partitions="0,1,2,3">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="1552.596459" Rows="607744.000000" Width="30"/>
                       </dxl:Properties>

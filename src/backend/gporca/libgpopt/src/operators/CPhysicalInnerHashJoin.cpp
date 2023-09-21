@@ -14,6 +14,9 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
+#include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPredicateUtils.h"
@@ -37,6 +40,21 @@ CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
 						hash_opfamilies, is_null_aware, origin_xform)
 {
+	// number of total requests created by InnerHashJoin
+	ULONG ulDistrReqs = 4 + NumDistrReq();
+	SetDistrRequests(ulDistrReqs);
+
+	CPhysicalJoin *physical_join = dynamic_cast<CPhysicalJoin *>(this);
+	if ((GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
+		 GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2)) ||
+		physical_join->OriginXform() == CXform::ExfExpandNAryJoinGreedy)
+	{
+		SetPartPropagateRequests(2);
+	}
+	else
+	{
+		SetPartPropagateRequests(1);
+	}
 }
 
 
@@ -50,6 +68,115 @@ CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 //---------------------------------------------------------------------------
 CPhysicalInnerHashJoin::~CPhysicalInnerHashJoin() = default;
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CPhysicalInnerHashJoin::PdsRequired
+//
+//	@doc:
+//		Compute required distribution of the n-th child;
+//		this function creates four optimization requests to join children:
+//		Req(1 to N) (redistribute, redistribute), where we request the first hash join child
+//			to be distributed on single hash join keys separately, as well as the set
+//			of all hash join keys,
+//			the second hash join child is always required to match the distribution returned
+//			by first child
+// 		Req(N + 1) (hashed, broadcast)
+// 		Req(N + 2) (non-singleton, broadcast)
+// 		Req(N + 3) (singleton, singleton)
+//		Req(N + 4) (replicate, non-replicate)
+//
+//		we always check the distribution delivered by the first child (as
+//		given by child optimization order), and then match the delivered
+//		distribution on the second child
+//
+//---------------------------------------------------------------------------
+
+CEnfdDistribution *
+CPhysicalInnerHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
+							CReqdPropPlan *prppInput, ULONG child_index,
+							CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq)
+{
+	GPOS_ASSERT(2 > child_index);
+	GPOS_ASSERT(ulOptReq < UlDistrRequests());
+
+	CEnfdDistribution::EDistributionMatching dmatch =
+		Edm(prppInput, child_index, pdrgpdpCtxt, ulOptReq);
+	CDistributionSpec *const pdsInput = prppInput->Ped()->PdsRequired();
+
+	// if expression has to execute on a single host then we need a gather
+	if (exprhdl.NeedsSingletonExecution())
+	{
+		return GPOS_NEW(mp) CEnfdDistribution(
+			PdsRequireSingleton(mp, exprhdl, pdsInput, child_index), dmatch);
+	}
+
+	if (exprhdl.HasOuterRefs())
+	{
+		if (CDistributionSpec::EdtSingleton == pdsInput->Edt() ||
+			CDistributionSpec::EdtStrictReplicated == pdsInput->Edt())
+		{
+			return GPOS_NEW(mp) CEnfdDistribution(
+				PdsPassThru(mp, exprhdl, pdsInput, child_index), dmatch);
+		}
+		return GPOS_NEW(mp)
+			CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecReplicated(
+								  CDistributionSpec::EdtStrictReplicated),
+							  dmatch);
+	}
+
+	const ULONG ulHashDistributeRequests = NumDistrReq();
+
+	if (ulOptReq < ulHashDistributeRequests)
+	{
+		// requests 1 .. N are (redistribute, redistribute)
+		CDistributionSpec *pds = PdsRequiredRedistribute(
+			mp, exprhdl, pdsInput, child_index, pdrgpdpCtxt, ulOptReq);
+		if (CDistributionSpec::EdtHashed == pds->Edt())
+		{
+			CDistributionSpecHashed *pdsHashed =
+				CDistributionSpecHashed::PdsConvert(pds);
+			pdsHashed->ComputeEquivHashExprs(mp, exprhdl);
+		}
+		return GPOS_NEW(mp) CEnfdDistribution(pds, dmatch);
+	}
+
+	if (ulOptReq == ulHashDistributeRequests ||
+		ulOptReq == ulHashDistributeRequests + 1)
+	{
+		// requests N+1, N+2 are (hashed/non-singleton, replicate)
+
+		CDistributionSpec *pds =
+			PdsRequiredReplicate(mp, exprhdl, pdsInput, child_index,
+								 pdrgpdpCtxt, ulOptReq, prppInput);
+		if (CDistributionSpec::EdtHashed == pds->Edt())
+		{
+			CDistributionSpecHashed *pdsHashed =
+				CDistributionSpecHashed::PdsConvert(pds);
+			pdsHashed->ComputeEquivHashExprs(mp, exprhdl);
+		}
+		return GPOS_NEW(mp) CEnfdDistribution(pds, dmatch);
+	}
+
+	if (ulOptReq == ulHashDistributeRequests + 2)
+	{
+		// requests N+3 is (singleton, singleton)
+		return GPOS_NEW(mp)
+			CEnfdDistribution(PdsRequiredSingleton(mp, exprhdl, pdsInput,
+												   child_index, pdrgpdpCtxt),
+							  dmatch);
+	}
+	GPOS_ASSERT(ulOptReq == ulHashDistributeRequests + 3);
+	// requests N+4 is (broadcast, non-singleton)
+
+	// The match type for this request must be set to "Satisfy" because EdtReplicated
+	// is the only required property. If the outer child is derived with an EdtStrictReplicated
+	// distribution spec, it will never "Match" the required distribution spec,
+	// and as a result, it will not be optimized.
+	return GPOS_NEW(mp) CEnfdDistribution(
+		PdsRequiredOuterReplicated(mp, exprhdl, pdsInput, child_index,
+								   pdrgpdpCtxt, ulOptReq, prppInput),
+		CEnfdDistribution::EdmSatisfy);
+}
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -300,17 +300,16 @@ explain select * from t1, t2 where t1.b = t2.b and t2.b |=| 1;
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=20)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=20)
-         Hash Cond: (t2.b = (t1.b)::bigint)
-         ->  Dynamic Seq Scan on t2  (cost=0.00..431.00 rows=1 width=12)
-               Number of partitions to scan: 2 (out of 2)
-               Filter: (b |=| 1)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-               ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Dynamic Seq Scan on t1  (cost=0.00..431.00 rows=1 width=8)
-                                 Number of partitions to scan: 2 (out of 2)
- Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+         Hash Cond: ((t1.b)::bigint = t2.b)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Dynamic Seq Scan on t1  (cost=0.00..431.00 rows=1 width=8)
+                     Number of partitions to scan: 2 (out of 2)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+               ->  Dynamic Seq Scan on t2  (cost=0.00..431.00 rows=1 width=12)
+                     Number of partitions to scan: 2 (out of 2)
+                     Filter: (b |=| 1)
+ Optimizer: GPORCA
+(11 rows)
 
 select * from t1, t2 where t1.b = t2.b and t2.b |=| 1;
  a  | b  | a  | b  

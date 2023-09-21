@@ -46,15 +46,15 @@ where x.b = y.b;
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Hash Join
                Hash Cond: (t_motion_deadlock_1.b = t_motion_deadlock_2.b)
-               ->  Seq Scan on public.t_motion_deadlock_1
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      Output: t_motion_deadlock_1.b
+                     ->  Seq Scan on public.t_motion_deadlock_1
+                           Output: t_motion_deadlock_1.b
                ->  Hash
                      Output: t_motion_deadlock_2.b
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on public.t_motion_deadlock_2
                            Output: t_motion_deadlock_2.b
-                           ->  Seq Scan on public.t_motion_deadlock_2
-                                 Output: t_motion_deadlock_2.b
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (14 rows)
 
 select count(1)

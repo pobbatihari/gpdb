@@ -127,17 +127,17 @@ explain (analyze, timing off, summary off) select * from rand join const_tvf(1) 
 ------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.02 rows=1 width=8) (actual rows=1 loops=1)
    ->  Hash Join  (cost=0.00..431.02 rows=1 width=8) (actual rows=1 loops=1)
-         Hash Cond: (c1 = (1))
+         Hash Cond: ((1) = c1)
          Extra Text: (seg2)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
-         ->  Seq Scan on rand  (cost=0.00..431.02 rows=1 width=4) (actual rows=1 loops=1)
-               Filter: (c1 = 1)
-               Rows Removed by Filter: 322
-         ->  Hash  (cost=0.00..0.00 rows=1 width=4) (actual rows=1 loops=1)
+         ->  Result  (cost=0.00..0.00 rows=1 width=4) (actual rows=1 loops=1)
+               Filter: ((1) = 1)
+               ->  Result  (cost=0.00..0.00 rows=1 width=1) (actual rows=1 loops=1)
+         ->  Hash  (cost=431.02..431.02 rows=1 width=4) (actual rows=1 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
-               ->  Result  (cost=0.00..0.00 rows=1 width=4) (actual rows=1 loops=1)
-                     Filter: ((1) = 1)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=1) (actual rows=1 loops=1)
- Optimizer: Pivotal Optimizer (GPORCA)
+               ->  Seq Scan on rand  (cost=0.00..431.02 rows=1 width=4) (actual rows=1 loops=1)
+                     Filter: (c1 = 1)
+                     Rows Removed by Filter: 331
+ Optimizer: GPORCA
 (13 rows)
 
 explain (analyze, timing off, summary off) select * from rand join unnest_arr on rand.c1 = unnest_arr.c1;

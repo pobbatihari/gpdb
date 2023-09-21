@@ -214,7 +214,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="283008">
+    <dxl:Plan Id="0" SpaceSize="489984">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.001436" Rows="1.000000" Width="8"/>
@@ -224,7 +224,7 @@
           <dxl:ProjElem ColId="10" Alias="sum">
             <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="1" ColName="field_1" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="1" ColName="field_1" TypeMdid="0.23.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>
