@@ -267,6 +267,9 @@ public:
 	// is this cost context of a single stage agg
 	static BOOL IsSingleStageAggCostCtxt(const CCostContext *pcc);
 
+	// is the first child replicated
+	static BOOL IsChildReplicated(COptimizationContextArray *pdrgpoc);
+
 	// equality function
 	static BOOL
 	Equals(const CCostContext &ccLeft, const CCostContext &ccRight)
