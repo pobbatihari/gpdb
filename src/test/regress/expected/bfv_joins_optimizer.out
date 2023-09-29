@@ -4006,6 +4006,208 @@ INSERT INTO ext_stats_tbl VALUES('tC', true);
 ANALYZE ext_stats_tbl;
 explain SELECT 1 FROM ext_stats_tbl t11 FULL JOIN ext_stats_tbl t12 ON t12.c2;
 ERROR:  FULL JOIN is only supported with merge-joinable or hash-joinable join conditions
+--
+-- Tests for HashInnerJoin alternative <replicated, non-replicated>
+--
+--start_ignore
+drop table if exists rep1;
+NOTICE:  table "rep1" does not exist, skipping
+drop table if exists rep2;
+NOTICE:  table "rep2" does not exist, skipping
+drop table if exists rand;
+NOTICE:  table "rand" does not exist, skipping
+drop table if exists hash;
+NOTICE:  table "hash" does not exist, skipping
+--end_ignore
+create table rep1 (a int , b int) distributed replicated;
+create table rep2 (a int , b int) distributed replicated;
+create table rand (a int , b int) distributed randomly;
+create table hash (a int, b int) distributed by (a);
+insert into rep1 select i, i from generate_series(1, 100)i;
+insert into rep2 select i, i from generate_series(1, 10)i;
+insert into rand select i, i from generate_series(1, 10)i;
+insert into hash select i, i from generate_series(1, 10)i;
+analyze rep1, rep2, rand, hash;
+-- HashInnerJoin should select rep1 as the outer child and rand as the inner child without any motions
+select count(*) from rep1, rand where rep1.b = rand.b;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, rand where rep1.b = rand.b;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (rep1.b = rand.b)
+                     ->  Seq Scan on rep1
+                     ->  Hash
+                           ->  Seq Scan on rand
+ Optimizer: GPORCA
+(9 rows)
+
+-- HashInnerJoin should select rep1 as the outer child and hash  as the inner child without any motions
+select count(*) from rep1, hash where rep1.b = hash.b;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (rep1.b = hash.b)
+                     ->  Seq Scan on rep1
+                     ->  Hash
+                           ->  Seq Scan on hash
+ Optimizer: GPORCA
+(9 rows)
+
+-- HashInnerJoin should select rep1 as the outer child and rep2 as the inner child without any motions
+select count(*) from rep1, rep2 where rep1.b = rep2.b;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, rep2 where rep1.b = rep2.b;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (rep1.b = rep2.b)
+                     ->  Seq Scan on rep1
+                     ->  Hash
+                           ->  Seq Scan on rep2
+ Optimizer: GPORCA
+(9 rows)
+
+-- HashInnerJoin should select t1 as the outer child  with one time filter and rep1 as the inner child without any motions
+select count(*) from rep1, generate_series(1, 10) t1 where rep1.b = t1;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, generate_series(1, 10) t1 where rep1.b = t1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (generate_series.generate_series = rep1.b)
+                     ->  Result
+                           One-Time Filter: (gp_execution_segment() = 0)
+                           ->  Function Scan on generate_series
+                     ->  Hash
+                           ->  Seq Scan on rep1
+ Optimizer: GPORCA
+(11 rows)
+
+delete from rep1;
+insert into rep1 select i, i from generate_series(1, 10)i;
+insert into rand select i, i from generate_series(11, 100)i;
+insert into rep2 select i, i from generate_series(11, 100)i;
+insert into rand select i, i from generate_series(11, 100)i;
+insert into hash select i, i from generate_series(11, 100)i;
+analyze rep1, rep2, rand, hash;
+-- HashInnerJoin should select rand as the outer child and rep1 as the inner child without any motions
+select count(*) from rep1, rand where rep1.b = rand.b;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, rand where rep1.b = rand.b;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (rand.b = rep1.b)
+                     ->  Seq Scan on rand
+                     ->  Hash
+                           ->  Seq Scan on rep1
+ Optimizer: GPORCA
+(9 rows)
+
+-- HashInnerJoin should select hash as the outer child and rep1 as the inner child without any motions
+select count(*) from rep1, hash where rep1.b = hash.b;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (hash.b = rep1.b)
+                     ->  Seq Scan on hash
+                     ->  Hash
+                           ->  Seq Scan on rep1
+ Optimizer: GPORCA
+(9 rows)
+
+-- HashInnerJoin should select rep2 as the outer child and rep1 as the inner child without any motions
+select count(*) from rep1, rep2 where rep1.b = rep2.b;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, rep2 where rep1.b = rep2.b;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (rep2.b = rep1.b)
+                     ->  Seq Scan on rep2
+                     ->  Hash
+                           ->  Seq Scan on rep1
+ Optimizer: GPORCA
+(9 rows)
+
+-- HashInnerJoin should select t1 as the outer child  with one time filter and rep1 as the inner child without any motions
+select count(*) from rep1, generate_series(1, 100) t1 where rep1.b = t1;
+ count 
+-------
+    10
+(1 row)
+
+explain (costs off) select count(*) from rep1, generate_series(1, 100) t1 where rep1.b = t1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Hash Join
+                     Hash Cond: (generate_series.generate_series = rep1.b)
+                     ->  Result
+                           One-Time Filter: (gp_execution_segment() = 0)
+                           ->  Function Scan on generate_series
+                     ->  Hash
+                           ->  Seq Scan on rep1
+ Optimizer: GPORCA
+(11 rows)
+
+drop table rep1,rep2, rand, hash;
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';
