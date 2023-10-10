@@ -133,16 +133,37 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
 
 		if (CDistributionSpec::EdtStrictReplicated == pds->Edt() &&
-			CDistributionSpec::EdtHashed == PdsRequired()->Edt() &&
-			EdmSatisfy == m_edm)
+			CDistributionSpec::EdtHashed == PdsRequired()->Edt())
 		{
-			// child delivers a replicated distribution, no need to enforce hashed distribution
-			// if only satisfiability is needed
-			return EpetUnnecessary;
+			if (EdmSatisfy == m_edm)
+			{
+				// child delivers a replicated distribution, no need to enforce
+				// hashed distribution if only satisfiability is needed
+				return EpetUnnecessary;
+			}
+			else if (EdmExact == m_edm)
+			{
+				// Prohibit the plan in which we enforce hashed distribution on
+				// the outer child, and it produces a replicated distribution,
+				// as we have a superior alternative (broadcast, non-singleton)
+				return EpetProhibited;
+			}
 		}
 
 		if (CDistributionSpec::EdtNonSingleton == m_pds->Edt() &&
 			!CDistributionSpecNonSingleton::PdsConvert(m_pds)->FAllowEnforced())
+		{
+			return EpetProhibited;
+		}
+
+		// Use the HashInnerJoin alternative (broadcast, non-singleton) only
+		// when the HashInnerJoin's outer child is replicated; otherwise,
+		// prohibit this plan
+		if (CDistributionSpec::EdtReplicated == m_pds->Edt() &&
+			!CDistributionSpecReplicated::PdsConvert(m_pds)->FAllowEnforced() &&
+			((CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
+			  CDistributionSpec::EdtTaintedReplicated != pds->Edt()) ||
+			 popPhysical->Eopid() == COperator::EopPhysicalMotionBroadcast))
 		{
 			return EpetProhibited;
 		}

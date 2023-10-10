@@ -113,6 +113,21 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 	return false;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CDistributionSpecReplicated::Matches
+//
+//	@doc:
+//		Match function
+//
+//---------------------------------------------------------------------------
+BOOL
+CDistributionSpecReplicated::Matches(const CDistributionSpec *pds) const
+{
+	return (Edt() == pds->Edt() ||
+			CDistributionSpec::EdtReplicated == pds->Edt());
+}
+
 void
 CDistributionSpecReplicated::AppendEnforcers(CMemoryPool *mp,
 											 CExpressionHandle &,  // exprhdl
