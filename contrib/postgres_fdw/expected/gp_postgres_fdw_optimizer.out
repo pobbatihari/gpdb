@@ -1354,13 +1354,13 @@ explain select * from gp_any, table_dist_repl where gp_any.a=table_dist_repl.f1;
 ------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=28)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=28)
-         Hash Cond: (a = table_dist_repl.f1)
-         ->  Result  (cost=0.00..431.00 rows=2 width=8)
-               One-Time Filter: (gp_execution_segment() = 0)
-               ->  Foreign Scan on gp_any  (cost=0.00..431.00 rows=2 width=8)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
-               ->  Seq Scan on table_dist_repl  (cost=0.00..431.00 rows=1 width=20)
- Optimizer: Pivotal Optimizer (GPORCA)
+         Hash Cond: (table_dist_repl.f1 = a)
+         ->  Seq Scan on table_dist_repl  (cost=0.00..431.00 rows=1 width=20)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=8)
+               ->  Result  (cost=0.00..431.00 rows=2 width=8)
+                     One-Time Filter: (gp_execution_segment() = 0)
+                     ->  Foreign Scan on gp_any  (cost=0.00..431.00 rows=2 width=8)
+ Optimizer: GPORCA
 (9 rows)
 
 select * from gp_any, table_dist_repl where gp_any.a=table_dist_repl.f1;
