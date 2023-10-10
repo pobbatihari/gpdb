@@ -2663,7 +2663,7 @@
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:HashCondList>
-            <dxl:DynamicTableScan SelectorIds="11">
+            <dxl:DynamicTableScan SelectorIds="13">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.003571" Rows="156.000000" Width="8"/>
               </dxl:Properties>
@@ -2698,7 +2698,7 @@
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:DynamicTableScan>
-            <dxl:PartitionSelector RelationMdid="6.17804.1.0" SelectorId="11" ScanId="3" Partitions="3">
+            <dxl:PartitionSelector RelationMdid="6.17804.1.0" SelectorId="13" ScanId="3" Partitions="3">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000166" Rows="3.000000" Width="8"/>
               </dxl:Properties>
