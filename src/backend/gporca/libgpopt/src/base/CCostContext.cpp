@@ -601,6 +601,49 @@ CCostContext::IsSingleStageAggCostCtxt(const CCostContext *pcc)
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CCostContext::IsChildReplicated
+//
+//	@doc:
+//		Return true if the child derived distribution is Strictreplicated.
+//
+//---------------------------------------------------------------------------
+BOOL
+CCostContext::IsChildReplicated(COptimizationContextArray *pdrgpoc)
+{
+	if (pdrgpoc->Size() >= 1)
+	{
+		COperator *pop = (*pdrgpoc)[0]->PccBest()->Pgexpr()->Pop();
+		if (pop->FPhysical())
+		{
+			COperator::EOperatorId op_id = pop->Eopid();
+			switch (op_id)
+			{
+				case COperator::EopPhysicalTableScan:
+					// return true if operator derived spec is StrictReplicated
+					return (CDistributionSpec::EdtStrictReplicated ==
+							CPhysicalScan::PopConvert(pop)->Pds()->Edt());
+				case COperator::EopPhysicalFilter:
+				case COperator::EopPhysicalSort:
+				case COperator::EopPhysicalLimit:
+				case COperator::EopPhysicalHashAgg:
+				case COperator::EopPhysicalStreamAgg:
+				case COperator::EopPhysicalMotionGather:
+				case COperator::EopPhysicalMotionRandom:
+				case COperator::EopPhysicalMotionHashDistribute:
+				case COperator::EopPhysicalMotionBroadcast:
+					// check child's derived spec is StrictReplicated or not
+					return IsChildReplicated(
+						(*pdrgpoc)[0]->PccBest()->Pdrgpoc());
+				default:
+					return false;
+			}
+		}
+	}
+	return false;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CCostContext::CostCompute
 //
 //	@doc:
@@ -651,7 +694,8 @@ CCostContext::CostCompute(CMemoryPool *mp, CCostArray *pdrgpcostChildren)
 
 	// extract local costing info
 	DOUBLE rows = m_pstats->Rows().Get();
-	if (CDistributionSpec::EdptPartitioned == Pdpplan()->Pds()->Edpt())
+	if (CDistributionSpec::EdptPartitioned == Pdpplan()->Pds()->Edpt() &&
+		!IsChildReplicated(Pdrgpoc()))
 	{
 		// scale statistics row estimate by number of segments
 		rows = DRowsPerHost().Get();
@@ -683,7 +727,8 @@ CCostContext::CostCompute(CMemoryPool *mp, CCostArray *pdrgpcostChildren)
 
 		DOUBLE dRowsChild = child_stats->Rows().Get();
 		if (CDistributionSpec::EdptPartitioned ==
-			pccChild->Pdpplan()->Pds()->Edpt())
+				pccChild->Pdpplan()->Pds()->Edpt() &&
+			!IsChildReplicated(pccChild->Pdrgpoc()))
 		{
 			// scale statistics row estimate by number of segments
 			dRowsChild = pccChild->DRowsPerHost().Get();

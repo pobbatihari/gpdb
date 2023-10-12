@@ -87,6 +87,13 @@ public:
 		return m_pdrgpcrOutput;
 	}
 
+	// return derived distribution
+	CDistributionSpec *
+	Pds() const
+	{
+		return m_pds;
+	}
+
 	// sensitivity to order of inputs
 	BOOL FInputOrderSensitive() const override;
 
