@@ -4006,6 +4006,102 @@ INSERT INTO ext_stats_tbl VALUES('tC', true);
 ANALYZE ext_stats_tbl;
 explain SELECT 1 FROM ext_stats_tbl t11 FULL JOIN ext_stats_tbl t12 ON t12.c2;
 ERROR:  FULL JOIN is only supported with merge-joinable or hash-joinable join conditions
+-- Tests for verifying that HashJoin should not choose the [hash, hash] alternative
+-- start_ignore
+drop table if exists rep;
+NOTICE:  table "rep" does not exist, skipping
+drop table if exists rand;
+NOTICE:  table "rand" does not exist, skipping
+-- end_ignore
+create table rep(a int, b int) distributed replicated;
+create table rand(a int, b int) distributed randomly;
+insert into rep select i, i from generate_series(1, 300)i;
+insert into rand select i, i from generate_series(1, 10)i;
+analyze rep, rand;
+explain (costs off) select * from rand t1 join rep t2 on t1.a = t2.a;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Hash Join
+         Hash Cond: (rep.a = rand.a)
+         ->  Seq Scan on rep
+         ->  Hash
+               ->  Broadcast Motion 3:1  (slice2; segments: 3)
+                     ->  Seq Scan on rand
+ Optimizer: GPORCA
+(8 rows)
+
+-- Verify the plan by adding more tuples to rand table
+insert into rand select i, i from generate_series(1, 1000)i;
+analyze rand;
+explain (costs off) select * from rand t1 join rep t2 on t1.a = t2.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rand.a = rep.a)
+         ->  Seq Scan on rand
+         ->  Hash
+               ->  Seq Scan on rep
+ Optimizer: GPORCA
+(7 rows)
+
+-- Filter over replicated table
+explain (costs off) select * from rand t1 join rep t2 on t1.a = t2.a and t2.a<100;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rand.a = rep.a)
+         ->  Seq Scan on rand
+               Filter: (a < 100)
+         ->  Hash
+               ->  Seq Scan on rep
+                     Filter: (a < 100)
+ Optimizer: GPORCA
+(9 rows)
+
+-- GroupAgg over replicated table
+delete from rep;
+delete from rand;
+insert into rep select i%10, i%10 from generate_series(1, 10)i;
+insert into rand select i%10, i%10 from generate_series(1, 10)i;
+analyze rep, rand;
+explain (costs off) select x.a from rand x join (select distinct(a) from rep) as agg on x.a=agg.a;
+                  QUERY PLAN                   
+-----------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rand.a = rep.a)
+         ->  Seq Scan on rand
+         ->  Hash
+               ->  GroupAggregate
+                     Group Key: rep.a
+                     ->  Sort
+                           Sort Key: rep.a
+                           ->  Seq Scan on rep
+ Optimizer: GPORCA
+(11 rows)
+
+-- HashAgg over replicated table
+insert into rand select i%10, i%10 from generate_series(1, 100)i;
+insert into rep select i, i from generate_series(1, 100)i;
+analyze rep, rand ;
+explain (costs off) select x.a from rand x join (select distinct(a) from rep) as agg on x.a=agg.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rand.a = rep.a)
+         ->  Seq Scan on rand
+         ->  Hash
+               ->  HashAggregate
+                     Group Key: rep.a
+                     ->  Seq Scan on rep
+ Optimizer: GPORCA
+(9 rows)
+
+drop table rep, rand;
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

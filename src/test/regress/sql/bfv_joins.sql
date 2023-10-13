@@ -544,6 +544,45 @@ ANALYZE ext_stats_tbl;
 
 explain SELECT 1 FROM ext_stats_tbl t11 FULL JOIN ext_stats_tbl t12 ON t12.c2;
 
+-- Tests for verifying that HashJoin should not choose the [hash, hash] alternative
+
+-- start_ignore
+drop table if exists rep;
+drop table if exists rand;
+-- end_ignore
+
+create table rep(a int, b int) distributed replicated;
+create table rand(a int, b int) distributed randomly;
+
+insert into rep select i, i from generate_series(1, 300)i;
+insert into rand select i, i from generate_series(1, 10)i;
+analyze rep, rand;
+explain (costs off) select * from rand t1 join rep t2 on t1.a = t2.a;
+
+-- Verify the plan by adding more tuples to rand table
+insert into rand select i, i from generate_series(1, 1000)i;
+analyze rand;
+explain (costs off) select * from rand t1 join rep t2 on t1.a = t2.a;
+
+-- Filter over replicated table
+explain (costs off) select * from rand t1 join rep t2 on t1.a = t2.a and t2.a<100;
+
+-- GroupAgg over replicated table
+delete from rep;
+delete from rand;
+insert into rep select i%10, i%10 from generate_series(1, 10)i;
+insert into rand select i%10, i%10 from generate_series(1, 10)i;
+analyze rep, rand;
+explain (costs off) select x.a from rand x join (select distinct(a) from rep) as agg on x.a=agg.a;
+
+-- HashAgg over replicated table
+insert into rand select i%10, i%10 from generate_series(1, 100)i;
+insert into rep select i, i from generate_series(1, 100)i;
+analyze rep, rand ;
+explain (costs off) select x.a from rand x join (select distinct(a) from rep) as agg on x.a=agg.a;
+
+drop table rep, rand;
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';
