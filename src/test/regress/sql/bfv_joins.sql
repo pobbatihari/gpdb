@@ -605,6 +605,74 @@ ANALYZE ext_stats_tbl;
 
 explain SELECT 1 FROM ext_stats_tbl t11 FULL JOIN ext_stats_tbl t12 ON t12.c2;
 
+--
+-- Tests for HashInnerJoin alternative <replicated, non-replicated>
+--
+
+--start_ignore
+drop table if exists rep1;
+drop table if exists rep2;
+drop table if exists rand;
+drop table if exists hash;
+--end_ignore
+
+create table rep1 (a int , b int) distributed replicated;
+create table rep2 (a int , b int) distributed replicated;
+create table rand (a int , b int) distributed randomly;
+create table hash (a int, b int) distributed by (a);
+
+insert into rep1 select i, i from generate_series(1, 100)i;
+insert into rep2 select i, i from generate_series(1, 10)i;
+insert into rand select i, i from generate_series(1, 10)i;
+insert into hash select i, i from generate_series(1, 10)i;
+
+analyze rep1, rep2, rand, hash;
+
+-- HashInnerJoin should select rep1 as the outer child and rand as the inner child without any motions
+select count(*) from rep1, rand where rep1.b = rand.b;
+explain (costs off) select count(*) from rep1, rand where rep1.b = rand.b;
+
+-- HashInnerJoin should select rep1 as the outer child and hash  as the inner child without any motions
+select count(*) from rep1, hash where rep1.b = hash.b;
+explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
+
+-- HashInnerJoin should select rep1 as the outer child and rep2 as the inner child without any motions
+select count(*) from rep1, rep2 where rep1.b = rep2.b;
+explain (costs off) select count(*) from rep1, rep2 where rep1.b = rep2.b;
+
+-- HashInnerJoin should select t1 as the outer child  with one time filter and rep1 as the inner child without any motions
+select count(*) from rep1, generate_series(1, 10) t1 where rep1.b = t1;
+explain (costs off) select count(*) from rep1, generate_series(1, 10) t1 where rep1.b = t1;
+
+delete from rep1;
+insert into rep1 select i, i from generate_series(1, 10)i;
+insert into rand select i, i from generate_series(11, 100)i;
+insert into rep2 select i, i from generate_series(11, 100)i;
+insert into rand select i, i from generate_series(11, 100)i;
+insert into hash select i, i from generate_series(11, 100)i;
+analyze rep1, rep2, rand, hash;
+
+-- HashInnerJoin should select rand as the outer child and rep1 as the inner child without any motions
+select count(*) from rep1, rand where rep1.b = rand.b;
+explain (costs off) select count(*) from rep1, rand where rep1.b = rand.b;
+
+-- HashInnerJoin should select hash as the outer child and rep1 as the inner child without any motions
+select count(*) from rep1, hash where rep1.b = hash.b;
+explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
+
+-- HashInnerJoin should select rep2 as the outer child and rep1 as the inner child without any motions
+select count(*) from rep1, rep2 where rep1.b = rep2.b;
+explain (costs off) select count(*) from rep1, rep2 where rep1.b = rep2.b;
+
+-- HashInnerJoin should select t1 as the outer child  with one time filter and rep1 as the inner child without any motions
+select count(*) from rep1, generate_series(1, 100) t1 where rep1.b = t1;
+explain (costs off) select count(*) from rep1, generate_series(1, 100) t1 where rep1.b = t1;
+
+-- HashInnerJoin should choose <hash, hash > alternative
+select count(*) from rand r1 join hash h1 on  r1.b = h1.b;
+explain (costs off) select count(*) from rand r1 join hash h1 on  r1.b = h1.b;
+drop table rep1,rep2, rand, hash;
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';
