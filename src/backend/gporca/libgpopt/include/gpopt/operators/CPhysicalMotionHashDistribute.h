@@ -113,6 +113,9 @@ public:
 	CEnfdProp::EPropEnforcingType EpetOrder(
 		CExpressionHandle &exprhdl, const CEnfdOrder *peo) const override;
 
+//	// derive sort order
+//	CDistributionSpec *PdsDerive(CMemoryPool *mp,
+//						  CExpressionHandle &exprhdl) const override;
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------

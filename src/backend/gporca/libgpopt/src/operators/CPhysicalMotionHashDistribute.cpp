@@ -237,4 +237,27 @@ CPhysicalMotionHashDistribute::PdsRequired(
 	}
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CPhysicalMotion::PdsDerive
+//
+//	@doc:
+//		Derive distribution
+//
+//---------------------------------------------------------------------------
+//CDistributionSpec *
+//CPhysicalMotionHashDistribute::PdsDerive(CMemoryPool * /*mp*/, CExpressionHandle &exprhdl  /*exprhdl*/
+//) const
+//{
+//
+//	CDistributionSpec *pds = exprhdl.Pdpplan(0 /*child_index*/)->Pds();
+//	if (CDistributionSpec::EdtStrictReplicated != pds->Edt()) {
+//		pds = Pds();
+//	}
+//
+//	pds->AddRef();
+//
+//	return pds;
+//}
+
 // EOF

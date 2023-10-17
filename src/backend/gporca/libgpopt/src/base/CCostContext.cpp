@@ -694,11 +694,26 @@ CCostContext::CostCompute(CMemoryPool *mp, CCostArray *pdrgpcostChildren)
 
 	// extract local costing info
 	DOUBLE rows = m_pstats->Rows().Get();
-	if (CDistributionSpec::EdptPartitioned == Pdpplan()->Pds()->Edpt() &&
-		!IsChildReplicated(Pdrgpoc()))
+
+
+	if (CDistributionSpec::EdptPartitioned == Pdpplan()->Pds()->Edpt())
+	//&&
+//		!IsChildReplicated(Pdrgpoc()))
 	{
-		// scale statistics row estimate by number of segments
-		rows = DRowsPerHost().Get();
+//		if (arity > 0 )
+//		{
+//			CDistributionSpec *fcpds =
+//				exprhdl.Pdpplan(0 /*child_index*/)->Pds();
+//			if (fcpds->Edt() != CDistributionSpec::EdtStrictReplicated)
+//			{
+//				// scale statistics row estimate by number of segments
+//				rows = DRowsPerHost().Get();
+//			}
+//		} else
+//		{
+//				rows = DRowsPerHost().Get();
+//		}
+
 	}
 	ci.SetRows(rows);
 
@@ -726,9 +741,9 @@ CCostContext::CostCompute(CMemoryPool *mp, CCostArray *pdrgpcostChildren)
 						 GPOS_NEW(mp) ICostModel::CCostingStats(child_stats));
 
 		DOUBLE dRowsChild = child_stats->Rows().Get();
+
 		if (CDistributionSpec::EdptPartitioned ==
-				pccChild->Pdpplan()->Pds()->Edpt() &&
-			!IsChildReplicated(pccChild->Pdrgpoc()))
+				pccChild->Pdpplan()->Pds()->Edpt() )
 		{
 			// scale statistics row estimate by number of segments
 			dRowsChild = pccChild->DRowsPerHost().Get();
@@ -775,6 +790,14 @@ CCostContext::DRowsPerHost() const
 		CDistributionSpecHashed *pdshashed =
 			CDistributionSpecHashed::PdsConvert(pds);
 		CExpressionArray *pdrgpexpr = pdshashed->Pdrgpexpr();
+		COptimizationContextArray *pdrgpoc = this->Pdrgpoc();
+		COperator *pop = (*pdrgpoc)[0]->PccBest()->Pgexpr()->Pop();
+
+		if (pop->FPhysical()) {
+			return true;
+		}
+
+
 		CColRefSet *pcrsUsed = CUtils::PcrsExtractColumns(m_mp, pdrgpexpr);
 
 		const CColRefSet *pcrsReqdStats =
