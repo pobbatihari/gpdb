@@ -532,10 +532,9 @@ CPhysicalHashJoin::PdsRequiredOuterReplicated(
 		return GPOS_NEW(mp) CDistributionSpecSingleton();
 	}
 
-	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt() ||
-		CDistributionSpec::EdtTaintedReplicated == pdsInner->Edt())
+	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
 	{
-		// first child is StrictReplicated/TaintedReplicated, request second child to
+		// first child is StrictReplicate request second child to
 		// execute non-singleton
 		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 	}
