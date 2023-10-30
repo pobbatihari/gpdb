@@ -424,8 +424,16 @@ CPhysicalHashJoin::PdshashedMatching(
 		fNullsColocated = false;
 	}
 
-	return GPOS_NEW(mp)
-		CDistributionSpecHashed(pdrgpexpr, fNullsColocated, opfamilies);
+	// To restrict the <hash, hash> alternative for InnerHashJoin set the
+	// "allow enforced" to false.
+	BOOL fAllowEnforced = true;
+	if (COperator::EopPhysicalInnerHashJoin == Eopid())
+	{
+		fAllowEnforced = false;
+	}
+
+	return GPOS_NEW(mp) CDistributionSpecHashed(pdrgpexpr, fNullsColocated,
+												opfamilies, fAllowEnforced);
 }
 
 
