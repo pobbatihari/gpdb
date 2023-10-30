@@ -52,6 +52,10 @@ private:
 	// HD1 satisfies HD2 if:
 	//	* HD1 colocates NULLs or
 	//  * HD2 doesn't care about NULLs
+
+	// should allow this hashed spec to be enforced?
+	BOOL m_fAllowEnforced;
+
 	BOOL
 	FNullsColocatedCompatible(const CDistributionSpecHashed *pds) const
 	{
@@ -73,7 +77,8 @@ public:
 
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
-							IMdIdArray *opfamilies = nullptr);
+							IMdIdArray *opfamilies = nullptr,
+							BOOL fAllowEnforced = true);
 
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
@@ -127,6 +132,13 @@ public:
 	Opfamilies() const
 	{
 		return m_opfamilies;
+	}
+
+	// should allow this hashed spec to be enforced?
+	BOOL
+	FAllowEnforced() const
+	{
+		return m_fAllowEnforced;
 	}
 
 	// columns used by distribution expressions
