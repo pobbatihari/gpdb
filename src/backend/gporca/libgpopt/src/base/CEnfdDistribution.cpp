@@ -141,7 +141,7 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 				// hashed distribution if only satisfiability is needed
 				return EpetUnnecessary;
 			}
-			else if (EdmExact == m_edm)
+			else if (EdmExact == m_edm && !CDistributionSpecHashed::PdsConvert(m_pds)->FAllowEnforced())
 			{
 				// Prohibit the plan in which we enforce hashed distribution on
 				// the outer child, and it produces a replicated distribution,

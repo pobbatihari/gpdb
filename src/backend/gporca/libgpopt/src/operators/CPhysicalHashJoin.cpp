@@ -416,6 +416,11 @@ CPhysicalHashJoin::PdshashedMatching(
 
 	// nulls colocated for inner hash joins, but not colocated in outer hash joins
 	BOOL fNullsColocated = true;
+	BOOL fAllowEnforced = true;
+
+	if (COperator::EopPhysicalInnerHashJoin == Eopid()) {
+		fAllowEnforced = false;
+	}
 
 	if (!m_is_null_aware &&
 		(COperator::EopPhysicalLeftOuterHashJoin == Eopid() ||
@@ -425,7 +430,7 @@ CPhysicalHashJoin::PdshashedMatching(
 	}
 
 	return GPOS_NEW(mp)
-		CDistributionSpecHashed(pdrgpexpr, fNullsColocated, opfamilies);
+		CDistributionSpecHashed(pdrgpexpr, fNullsColocated, opfamilies, fAllowEnforced);
 }
 
 
