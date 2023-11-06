@@ -143,11 +143,18 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 			}
 			else if (EdmExact == m_edm &&
 					 !CDistributionSpecHashed::PdsConvert(PdsRequired())
-						  ->FAllowEnforced())
+						  ->FAllowReplicated())
 			{
-				// Prohibit the plan in which we enforce hashed distribution on
-				// the outer child, and it produces a replicated distribution,
-				// as we have a superior alternative (broadcast, non-singleton)
+				// Prohibit the plan in which we enforce hashed
+				// distribution on outer child, and it results
+				// in a replicated distribution. This is
+				// because, we noticed that the hash join
+				// costing is inaccurate when the child is
+				// replicated, causing the cost of the (hash,
+				// hash) alternative low and thus chosen
+				// always. Therefore, we are prohibiting this
+				// alternative in favor of a better one, which
+				// is (broadcast, non-singleton)
 				return EpetProhibited;
 			}
 		}
@@ -158,9 +165,20 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 			return EpetProhibited;
 		}
 
-		// Use the HashInnerJoin alternative (broadcast, non-singleton) only
-		// when the HashInnerJoin's outer child is replicated; otherwise,
-		// prohibit this plan
+		// Apply the HashInnerJoin alternative (broadcast,
+		// non-singleton) exclusively when the outer child of
+		// HashInnerJoin is replicated. In other cases, prohibit this
+		// plan.  The criteria for prohibiting plans are as follows:
+		// - When the outer table required distribution spec is
+		//   replicated, FAllowEnforced is set to false,
+		//   - Verify that the derived distribution is neither
+		//     StrictReplicated nor TaintedReplicated.
+		//     (or)
+		//   - Verify whether the operator is a
+		//     PhysicalMotionBroadcast. This check is essential because
+		//     there are scenarios where a different optimization
+		//     request within the same group may enforce broadcast
+		//     motion.
 		if (CDistributionSpec::EdtReplicated == m_pds->Edt() &&
 			!CDistributionSpecReplicated::PdsConvert(m_pds)->FAllowEnforced() &&
 			((CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
