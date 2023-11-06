@@ -53,8 +53,8 @@ private:
 	//	* HD1 colocates NULLs or
 	//  * HD2 doesn't care about NULLs
 
-	// should allow this hashed spec to be enforced?
-	BOOL m_fAllowEnforced;
+	// should allow Replicated Distribution?
+	BOOL m_fAllowReplicated;
 
 	BOOL
 	FNullsColocatedCompatible(const CDistributionSpecHashed *pds) const
@@ -78,7 +78,7 @@ public:
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
 							IMdIdArray *opfamilies = nullptr,
-							BOOL fAllowEnforced = true);
+							BOOL fAllowReplicated = true);
 
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
@@ -134,11 +134,11 @@ public:
 		return m_opfamilies;
 	}
 
-	// should allow this hashed spec to be enforced?
+	// should allow Replicated Distribution?
 	BOOL
-	FAllowEnforced() const
+	FAllowReplicated() const
 	{
-		return m_fAllowEnforced;
+		return m_fAllowReplicated;
 	}
 
 	// columns used by distribution expressions
