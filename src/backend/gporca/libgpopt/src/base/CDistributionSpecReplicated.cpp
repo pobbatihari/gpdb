@@ -119,7 +119,10 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 //		CDistributionSpecReplicated::Matches
 //
 //	@doc:
-//		Match function
+//		Check whether the required distribution spec is identical to
+//		the derived spec or, required distribution spec is replicated
+//		because the replicated spec satisfies both StrictReplicated and
+//		TaintedReplicated specs
 //
 //---------------------------------------------------------------------------
 BOOL
