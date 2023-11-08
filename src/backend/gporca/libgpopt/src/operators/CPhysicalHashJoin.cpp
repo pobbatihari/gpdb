@@ -426,7 +426,7 @@ CPhysicalHashJoin::PdshashedMatching(
 
 	// To restrict the hash request on a replicated distribution for
 	// InnerHashJoin, disabling the 'fAllowReplicated' flag. Due to the
-	// lack of informationabout the child's distribution spec during the
+	// lack of information about the child's distribution spec during the
 	// creation of the alternative (hash, hash), we set the
 	// 'fAllowReplicated' flag to false for InnerHashJoin, and preventing
 	// the plans when applying enforcers in CEnfdDistribution::Epet() for
@@ -555,7 +555,8 @@ CPhysicalHashJoin::PdsRequiredOuterReplicated(
 
 	// otherwise, request second child to deliver Replicated distribution
 	return GPOS_NEW(mp) CDistributionSpecReplicated(
-		CDistributionSpec::EdtReplicated, false, false);
+		CDistributionSpec::EdtReplicated, false /*ignore_broadcast_threshold*/,
+		false /*fAllowEnforced*/);
 }
 
 //---------------------------------------------------------------------------
