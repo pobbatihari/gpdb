@@ -45,10 +45,9 @@ CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 	ULONG ulDistrReqs = GPOPT_NON_HASH_DIST_REQUESTS + NumDistrReq();
 	SetDistrRequests(ulDistrReqs);
 
-	CPhysicalJoin *physical_join = dynamic_cast<CPhysicalJoin *>(this);
 	if ((GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
 		 GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2)) ||
-		physical_join->OriginXform() == CXform::ExfExpandNAryJoinGreedy)
+		this->OriginXform() == CXform::ExfExpandNAryJoinGreedy)
 	{
 		SetPartPropagateRequests(2);
 	}
