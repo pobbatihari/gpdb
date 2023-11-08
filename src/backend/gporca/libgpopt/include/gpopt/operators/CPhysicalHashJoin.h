@@ -81,6 +81,12 @@ protected:
 	void CreateHashRedistributeRequests(CMemoryPool *mp);
 
 private:
+	// create (non-singleton, replicate) optimization request
+	CDistributionSpec *PdsRequiredReplicate(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CDistributionSpec *pdsInput, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq, CReqdPropPlan *prppInput);
+
 	// create a child hashed distribution request based on input hashed distribution,
 	// return NULL if no such request can be created
 	static CDistributionSpecHashed *PdshashedPassThru(
@@ -104,12 +110,6 @@ protected:
 											CDistributionSpec *pdsInput,
 											ULONG child_index,
 											CDrvdPropArray *pdrgpdpCtxt) const;
-
-	// create (non-singleton, replicate) optimization request
-	CDistributionSpec *PdsRequiredReplicate(
-		CMemoryPool *mp, CExpressionHandle &exprhdl,
-		CDistributionSpec *pdsInput, ULONG child_index,
-		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq, CReqdPropPlan *prppInput);
 
 	// create (replicate, non-singleton) optimization request
 	CDistributionSpec *PdsRequiredOuterReplicated(

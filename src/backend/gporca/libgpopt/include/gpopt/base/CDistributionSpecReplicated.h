@@ -62,14 +62,10 @@ public:
 	CDistributionSpecReplicated(
 		CDistributionSpec::EDistributionType replicated_type,
 		BOOL ignore_broadcast_threshold, BOOL fAllowEnforced)
-		: m_replicated(replicated_type),
-		  m_ignore_broadcast_threshold(ignore_broadcast_threshold),
-		  m_fAllowEnforced(fAllowEnforced)
+		: CDistributionSpecReplicated(replicated_type,
+									  ignore_broadcast_threshold)
 	{
-		GPOS_ASSERT(replicated_type == CDistributionSpec::EdtReplicated ||
-					replicated_type ==
-						CDistributionSpec::EdtTaintedReplicated ||
-					replicated_type == CDistributionSpec::EdtStrictReplicated);
+		m_fAllowEnforced = fAllowEnforced;
 	}
 
 	// accessor
