@@ -81,7 +81,7 @@ class GpBuild:
         fail_on_error(status)
 
         command = "source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && echo 'optimizer_segments={0}\ngp_segments_for_planner={0}' >> $COORDINATOR_DATA_DIRECTORY/postgresql.conf".format(num_segments)
-        print("running command: " + command)
+        print("Running command: " + command)
         status = self._run_cmd(command, None)
 
         fail_on_error(status)
