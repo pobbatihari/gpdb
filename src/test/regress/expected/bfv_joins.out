@@ -4241,6 +4241,65 @@ explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
  Optimizer: Postgres-based planner
 (9 rows)
 
+-- Aggregate on outer child(replicated table)
+explain (costs off) select *  from (select rep1.b from rep1 group by rep1.b) t1, hash t2 where t1.b = t2.b;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rep1.b = t2.b)
+         ->  HashAggregate
+               Group Key: rep1.b
+               ->  Seq Scan on rep1
+         ->  Hash
+               ->  Seq Scan on hash t2
+ Optimizer: Postgres-based planner
+(9 rows)
+
+select *  from (select rep1.b from rep1 group by rep1.b) t1, hash t2 where t1.b = t2.b;
+ b  | a  | b  
+----+----+----
+  8 |  8 |  8
+  4 |  4 |  4
+  2 |  2 |  2
+  7 |  7 |  7
+  3 |  3 |  3
+  1 |  1 |  1
+ 10 | 10 | 10
+  6 |  6 |  6
+  9 |  9 |  9
+  5 |  5 |  5
+(10 rows)
+
+-- Union of two replicated tables
+explain (costs off) select * from rep1 where rep1.a <= 5 union select * from rep2;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  HashAggregate
+         Group Key: rep1.a, rep1.b
+         ->  Append
+               ->  Seq Scan on rep1
+                     Filter: (a <= 5)
+               ->  Seq Scan on rep2
+ Optimizer: Postgres-based planner
+(8 rows)
+
+select * from rep1 where rep1.a <= 5 union select * from rep2;
+ a  | b  
+----+----
+ 10 | 10
+  8 |  8
+  2 |  2
+  5 |  5
+  1 |  1
+  4 |  4
+  7 |  7
+  3 |  3
+  9 |  9
+  6 |  6
+(10 rows)
+
 -- HashInnerJoin should select rep1 as the outer child and rep2 as the inner child without any motions
 select count(*) from rep1, rep2 where rep1.b = rep2.b;
  count 
