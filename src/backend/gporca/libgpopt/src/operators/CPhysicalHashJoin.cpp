@@ -514,8 +514,10 @@ CPhysicalHashJoin::PdsRequiredOuterReplicated(
 	CReqdPropPlan *prppInput)
 {
 	EChildExecOrder eceo = Eceo();
+
 	if (EceoLeftToRight == eceo)
 	{
+		GPOS_ASSERT(!"execption from outerreplicated");
 		// if optimization order is left to right, fall-back to
 		// implementation of parent Join operator
 		CEnfdDistribution *ped = CPhysicalJoin::Ped(
@@ -577,6 +579,7 @@ CPhysicalHashJoin::PdsRequiredReplicate(
 	EChildExecOrder eceo = Eceo();
 	if (EceoLeftToRight == eceo)
 	{
+		GPOS_ASSERT(!"execption from replicated");
 		// if optimization order is left to right, fall-back to implementation of parent Join operator
 		CEnfdDistribution *ped = CPhysicalJoin::Ped(
 			mp, exprhdl, prppInput, child_index, pdrgpdpCtxt, ulOptReq);
