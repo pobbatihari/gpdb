@@ -575,6 +575,14 @@ explain (costs off) select count(*) from rep1, rand where rep1.b = rand.b;
 select count(*) from rep1, hash where rep1.b = hash.b;
 explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
 
+-- Aggregate on outer child(replicated table)
+explain (costs off) select *  from (select rep1.b from rep1 group by rep1.b) t1, hash t2 where t1.b = t2.b;
+select *  from (select rep1.b from rep1 group by rep1.b) t1, hash t2 where t1.b = t2.b;
+
+-- Union of two replicated tables
+explain (costs off) select * from rep1 where rep1.a <= 5 union select * from rep2;
+select * from rep1 where rep1.a <= 5 union select * from rep2;
+
 -- HashInnerJoin should select rep1 as the outer child and rep2 as the inner child without any motions
 select count(*) from rep1, rep2 where rep1.b = rep2.b;
 explain (costs off) select count(*) from rep1, rep2 where rep1.b = rep2.b;
