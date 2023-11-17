@@ -508,24 +508,13 @@ CPhysicalHashJoin::PdsRequiredSingleton(CMemoryPool *mp,
 //
 //---------------------------------------------------------------------------
 CDistributionSpec *
-CPhysicalHashJoin::PdsRequiredOuterReplicated(
-	CMemoryPool *mp, CExpressionHandle &exprhdl, CDistributionSpec *,
-	ULONG child_index, CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq,
-	CReqdPropPlan *prppInput)
+CPhysicalHashJoin::PdsRequiredOuterReplicated(CMemoryPool *mp,
+											  CExpressionHandle &,	// exprhdl
+											  CDistributionSpec *,	// pdsInput
+											  ULONG child_index,
+											  CDrvdPropArray *pdrgpdpCtxt)
 {
-	EChildExecOrder eceo = Eceo();
-	if (EceoLeftToRight == eceo)
-	{
-		// if optimization order is left to right, fall-back to
-		// implementation of parent Join operator
-		CEnfdDistribution *ped = CPhysicalJoin::Ped(
-			mp, exprhdl, prppInput, child_index, pdrgpdpCtxt, ulOptReq);
-		CDistributionSpec *pds = ped->PdsRequired();
-		pds->AddRef();
-		SafeRelease(ped);
-		return pds;
-	}
-	GPOS_ASSERT(EceoRightToLeft == eceo);
+	GPOS_ASSERT(EceoRightToLeft == Eceo());
 
 	if (1 == child_index)
 	{
