@@ -131,10 +131,10 @@ CPhysicalInnerHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	}
 
 	// requests N+4 is (broadcast, non-singleton)
-	return GPOS_NEW(mp) CEnfdDistribution(
-		PdsRequiredOuterReplicated(mp, exprhdl, pdsInput, child_index,
-								   pdrgpdpCtxt, ulOptReq, prppInput),
-		dmatch);
+	return GPOS_NEW(mp)
+		CEnfdDistribution(PdsRequiredOuterReplicated(mp, exprhdl, pdsInput,
+													 child_index, pdrgpdpCtxt),
+						  dmatch);
 }
 
 //---------------------------------------------------------------------------
@@ -234,7 +234,8 @@ CPhysicalInnerHashJoin::PdsDeriveFromReplicatedOuter(
 {
 	GPOS_ASSERT(nullptr != pdsOuter);
 	GPOS_ASSERT(nullptr != pdsInner);
-	GPOS_ASSERT(CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt());
+	GPOS_ASSERT(CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt() ||
+				CDistributionSpec::EdtTaintedReplicated == pdsOuter->Edt());
 
 	// if outer child is replicated, join results distribution is defined by inner child
 	if (CDistributionSpec::EdtHashed == pdsInner->Edt())
@@ -324,8 +325,10 @@ CPhysicalInnerHashJoin::PdsDerive(CMemoryPool *mp,
 			return pdsDerived;
 		}
 	}
-
-	if (CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt())
+	// If the distribution of the outer child is Strict/Tainted Replicated,
+	// derive the join distribution based on the distribution of the inner child.
+	if (CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt() ||
+		CDistributionSpec::EdtTaintedReplicated == pdsOuter->Edt())
 	{
 		return PdsDeriveFromReplicatedOuter(mp, pdsOuter, pdsInner);
 	}
