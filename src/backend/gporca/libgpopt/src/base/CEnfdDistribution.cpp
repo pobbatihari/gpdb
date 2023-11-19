@@ -132,8 +132,9 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 	{
 		CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
 
-		if (CDistributionSpec::EdtStrictReplicated == pds->Edt() &&
-			CDistributionSpec::EdtHashed == PdsRequired()->Edt())
+		if ((CDistributionSpec::EdtStrictReplicated == pds->Edt() ||
+			 CDistributionSpec::EdtTaintedReplicated == pds->Edt()) &&
+				CDistributionSpec::EdtHashed == PdsRequired()->Edt())
 		{
 			if (EdmSatisfy == m_edm)
 			{
