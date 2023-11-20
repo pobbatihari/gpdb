@@ -134,9 +134,10 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 
 		if ((CDistributionSpec::EdtStrictReplicated == pds->Edt() ||
 			 CDistributionSpec::EdtTaintedReplicated == pds->Edt()) &&
-				CDistributionSpec::EdtHashed == PdsRequired()->Edt())
+			CDistributionSpec::EdtHashed == PdsRequired()->Edt())
 		{
-			if (EdmSatisfy == m_edm)
+			if (CDistributionSpec::EdtStrictReplicated == pds->Edt() &&
+				EdmSatisfy == m_edm)
 			{
 				// child delivers a replicated distribution, no need to enforce
 				// hashed distribution if only satisfiability is needed
