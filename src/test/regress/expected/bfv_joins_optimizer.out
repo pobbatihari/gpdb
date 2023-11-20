@@ -4152,25 +4152,22 @@ select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a 
 (10 rows)
 
 -- windowAgg on outer replicated child of HashInnerJoin
+set optimizer_enable_motion_redistribute to off;
 explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.04 rows=100 width=16)
-   ->  Hash Join  (cost=0.00..862.03 rows=34 width=16)
+   ->  Hash Join  (cost=0.00..862.04 rows=34 width=16)
          Hash Cond: ((sum(rep1.a) OVER (?)) = (hash.a)::bigint)
-         ->  Redistribute Motion 1:3  (slice2; segments: 1)  (cost=0.00..431.02 rows=34 width=8)
-               Hash Key: (sum(rep1.a) OVER (?))
-               ->  WindowAgg  (cost=0.00..431.02 rows=300 width=8)
-                     Partition By: rep1.a
-                     ->  Sort  (cost=0.00..431.02 rows=300 width=4)
-                           Sort Key: rep1.a
-                           ->  Seq Scan on rep1  (cost=0.00..431.00 rows=300 width=4)
+         ->  WindowAgg  (cost=0.00..431.02 rows=100 width=8)
+               Partition By: rep1.a
+               ->  Sort  (cost=0.00..431.02 rows=100 width=4)
+                     Sort Key: rep1.a
+                     ->  Seq Scan on rep1  (cost=0.00..431.00 rows=100 width=4)
          ->  Hash  (cost=431.00..431.00 rows=4 width=8)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=4 width=8)
-                     Hash Key: (hash.a)::bigint
-                     ->  Seq Scan on hash  (cost=0.00..431.00 rows=4 width=8)
+               ->  Seq Scan on hash  (cost=0.00..431.00 rows=4 width=8)
  Optimizer: GPORCA
-(15 rows)
+(11 rows)
 
 select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
  sum | a  | b  
@@ -4187,6 +4184,7 @@ select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash 
    8 |  8 |  8
 (10 rows)
 
+reset optimizer_enable_motion_redistribute;
 -- Union all on outer child (two replicated tables) of HashInnerJoin
 explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
                  QUERY PLAN                 
