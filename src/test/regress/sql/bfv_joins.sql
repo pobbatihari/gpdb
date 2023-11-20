@@ -649,8 +649,10 @@ explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1,
 select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
 
 -- windowAgg on outer replicated child of HashInnerJoin
+set optimizer_enable_motion_redistribute to off;
 explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
 select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
+reset optimizer_enable_motion_redistribute;
 
 -- Union all on outer child (two replicated tables) of HashInnerJoin
 explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
