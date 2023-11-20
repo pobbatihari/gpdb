@@ -76,6 +76,7 @@ CPhysicalInnerHashJoin::~CPhysicalInnerHashJoin() = default;
 //		Compute required distribution of the n-th child;
 //		this function creates four optimization requests to join children:
 //		First three optimization request are created using CPhysicalHashJoin::Ped()
+// 		0. (redistribute, redistribute)
 // 		1. (hashed, broadcast)
 // 		2. (non-singleton, broadcast)
 // 		3. (singleton, singleton)
@@ -95,10 +96,13 @@ CPhysicalInnerHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(2 > child_index);
 
 	const ULONG ulHashDistributeRequests = NumDistrReq();
+
+	// The variable ulHashDistributeRequests contains the count of redistribute
+	// requests and is set to 1 because there is a single redistribute request
+	// (optreq 0). The subsequent check (OptReq < (1+3)) ensures that we
+	// invoke HashJoin::Ped() for optimization requests ranging from 0 to 3.
 	if (ulOptReq < ulHashDistributeRequests + 3)
 	{
-		// Optimization requests for (hashed, broadcast), (non-singleton, broadcast),
-		// and (singleton, singleton) are generated through CPhysicalHashJoin::Ped()
 		return CPhysicalHashJoin::Ped(mp, exprhdl, prppInput, child_index,
 									  pdrgpdpCtxt, ulOptReq);
 	}
