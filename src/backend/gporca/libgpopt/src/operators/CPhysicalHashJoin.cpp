@@ -519,7 +519,7 @@ CPhysicalHashJoin::PdsRequiredOuterReplicated(CMemoryPool *mp,
 	if (1 == child_index)
 	{
 		// require inner child to be non-singleton
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton(false /* fAllowReplicated */, true /* fAllowEnforced */);
 	}
 	GPOS_ASSERT(0 == child_index);
 
@@ -533,13 +533,6 @@ CPhysicalHashJoin::PdsRequiredOuterReplicated(CMemoryPool *mp,
 		// first child is universal, request second child to execute on
 		// a single host to avoid duplicates
 		return GPOS_NEW(mp) CDistributionSpecSingleton();
-	}
-
-	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
-	{
-		// first child is StrictReplicate request second child to
-		// execute non-singleton
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 	}
 
 	// otherwise, request second child to deliver Replicated distribution
