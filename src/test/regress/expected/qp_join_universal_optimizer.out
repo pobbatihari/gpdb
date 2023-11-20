@@ -188,9 +188,9 @@ explain (analyze, costs off, timing off, summary off) select * from rep join con
          ->  Hash (actual rows=1 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                ->  Result (actual rows=1 loops=1)
-                     One-Time Filter: (gp_execution_segment() = 2)
+                     Filter: ((1) = 1)
                      ->  Result (actual rows=1 loops=1)
-                           Filter: ((1) = 1)
+                           One-Time Filter: (gp_execution_segment() = 0)
                            ->  Result (actual rows=1 loops=1)
  Optimizer: GPORCA
 (15 rows)

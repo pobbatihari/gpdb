@@ -4075,15 +4075,17 @@ explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
                     QUERY PLAN                    
 --------------------------------------------------
  Finalize Aggregate
-   ->  Gather Motion 1:1  (slice1; segments: 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Hash Join
                      Hash Cond: (rep1.a = rep2.a)
                      ->  Seq Scan on rep1
                      ->  Hash
-                           ->  Seq Scan on rep2
+                           ->  Result
+                                 One-Time Filter: (gp_execution_segment() = 0)
+                                 ->  Seq Scan on rep2
  Optimizer: GPORCA
-(9 rows)
+(11 rows)
 
 select count(*) from rep1, rep2 where rep1.a = rep2.a;
  count 
@@ -4345,18 +4347,20 @@ select count(*) from rep1, hash where rep1.a = hash.b;
 
 -- HashInnerJoin should select rep2 as the outer child and rep1 as the inner child without any motions
 explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
-                    QUERY PLAN                    
---------------------------------------------------
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
  Finalize Aggregate
-   ->  Gather Motion 1:1  (slice1; segments: 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Hash Join
                      Hash Cond: (rep2.a = rep1.a)
-                     ->  Seq Scan on rep2
+                     ->  Result
+                           One-Time Filter: (gp_execution_segment() = 2)
+                           ->  Seq Scan on rep2
                      ->  Hash
                            ->  Seq Scan on rep1
  Optimizer: GPORCA
-(9 rows)
+(11 rows)
 
 select count(*) from rep1, rep2 where rep1.a = rep2.a;
  count 

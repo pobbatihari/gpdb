@@ -512,7 +512,7 @@ CPhysicalHashJoin::PdsRequiredOuterReplicated(CMemoryPool *mp,
 											  CExpressionHandle &,	// exprhdl
 											  CDistributionSpec *,	// pdsInput
 											  ULONG child_index,
-											  CDrvdPropArray *pdrgpdpCtxt)
+											  CDrvdPropArray *pdrgpdpCtxt) const
 {
 	GPOS_ASSERT(EceoRightToLeft == Eceo());
 
