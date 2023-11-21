@@ -154,9 +154,9 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 				// costing is inaccurate when the child is
 				// replicated, causing the cost of the (hash,
 				// hash) alternative low and thus chosen
-				// always. Therefore, we are prohibiting this
-				// alternative in favor of a better one, which
-				// is (broadcast, non-singleton)
+				// always, despite higher execution times. Therefore,
+				// we are prohibiting this alternative in favor of a
+				// better one, which is (broadcast, non-singleton)
 				return EpetProhibited;
 			}
 		}
@@ -169,8 +169,9 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 
 		// Apply the HashInnerJoin alternative (broadcast,
 		// non-singleton) exclusively when the outer child of
-		// HashInnerJoin is replicated. In other cases, prohibit this
-		// plan.  The criteria for prohibiting plans are as follows:
+		// HashInnerJoin is replicated. Otherwise, we risk generating
+		// suboptimal plans by broadcasting the outer child. The
+		// criteria for prohibiting plans are as follows:
 		// - When the outer table required distribution spec is
 		//   replicated, FAllowEnforced is set to false,
 		//   - Verify that the derived distribution is neither
