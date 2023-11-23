@@ -70,7 +70,7 @@ CPhysicalInnerHashJoin::~CPhysicalInnerHashJoin() = default;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalInnerHashJoin::PdsRequired
+//		CPhysicalInnerHashJoin::Ped
 //
 //	@doc:
 //		Compute required distribution of the n-th child;
@@ -120,6 +120,10 @@ CPhysicalInnerHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			PdsRequireSingleton(mp, exprhdl, pdsInput, child_index), dmatch);
 	}
 
+	// If the expression contains outer references, it is essential to make
+	// a replicated or singleton request to prevent inefficient
+	// distribution strategies. This helps avoid unnecessary data movement
+	// between nodes and the risk of suboptimal plans.
 	if (exprhdl.HasOuterRefs())
 	{
 		if (CDistributionSpec::EdtSingleton == pdsInput->Edt() ||
