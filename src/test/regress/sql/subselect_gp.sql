@@ -1414,3 +1414,21 @@ select (SELECT EXISTS
                   FROM pg_views
                   WHERE schemaname = a)) from tmp;
 drop table tmp;
+
+-- Test LEAST() and GREATEST() with an embedded subquery
+drop table if exists foo;
+
+create table foo (a int, b int) distributed by(a);
+insert into foo values (1, 2), (2, 3), (3, 4);
+analyze foo;
+
+explain (costs off) select foo.a from foo where foo.a <= LEAST(foo.b, (SELECT 1), NULL);
+select foo.a from foo where foo.a <= LEAST(foo.b, (SELECT 1), NULL);
+
+explain (costs off) select foo.a from foo where foo.a <= GREATEST(foo.b, (SELECT 1), NULL);
+select foo.a from foo where foo.a <= GREATEST(foo.b, (SELECT 1), NULL);
+
+explain (costs off) select least((select 5), greatest(b, NULL, (select 1)), a) from foo;
+select least((select 5), greatest(b, NULL, (select 1)), a) from foo;
+
+drop table foo;

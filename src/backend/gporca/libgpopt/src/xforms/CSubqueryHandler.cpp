@@ -2204,6 +2204,7 @@ CSubqueryHandler::FProcessScalarOperator(CExpression *pexprOuter,
 		case COperator::EopScalarSwitch:
 		case COperator::EopScalarSwitchCase:
 		case COperator::EopScalarValuesList:
+		case COperator::EopScalarMinMax:
 			fSuccess = FRecursiveHandler(pexprOuter, pexprScalar, esqctxt,
 										 ppexprNewOuter, ppexprResidualScalar);
 			break;
