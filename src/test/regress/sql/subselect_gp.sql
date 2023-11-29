@@ -1432,3 +1432,23 @@ explain (costs off) select least((select 5), greatest(b, NULL, (select 1)), a) f
 select least((select 5), greatest(b, NULL, (select 1)), a) from foo;
 
 drop table foo;
+-- Test subquery within ScalarArrayRef or ScalarArrayRefIndexList
+drop table if exists bar;
+
+create table bar (a int[], b int[][]) distributed by(a);
+insert into bar values (ARRAY[1, 2, 3], ARRAY[[1, 2, 3], [4, 5, 6]]);
+analyze bar;
+
+explain (costs off) select (select a from bar)[1] from bar;
+select (select a from bar)[1] from bar;
+
+explain (costs off) select (select a from bar)[(select 1)] from bar;
+select (select a from bar)[(select 1)] from bar;
+
+explain (costs off) select (select b from bar)[1][1:3] from bar;
+select (select b from bar)[1][1:3] from bar;
+
+explain (costs off) select (select b from bar)[(select 1)][1:3] from bar;
+select (select b from bar)[(select 1)][1:3] from bar;
+
+drop table bar;

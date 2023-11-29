@@ -3819,3 +3819,81 @@ select least((select 5), greatest(b, NULL, (select 1)), a) from foo;
 (3 rows)
 
 drop table foo;
+-- Test subquery within ScalarArrayRef or ScalarArrayRefIndexList
+drop table if exists bar;
+create table bar (a int[], b int[][]) distributed by(a);
+insert into bar values (ARRAY[1, 2, 3], ARRAY[[1, 2, 3], [4, 5, 6]]);
+analyze bar;
+explain (costs off) select (select a from bar)[1] from bar;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Gather Motion 3:1  (slice3; segments: 3)
+           ->  Seq Scan on bar bar_1
+   ->  Seq Scan on bar
+ Optimizer: Postgres-based planner
+(6 rows)
+
+select (select a from bar)[1] from bar;
+ a 
+---
+ 1
+(1 row)
+
+explain (costs off) select (select a from bar)[(select 1)] from bar;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Result
+   InitPlan 2 (returns $1)  (slice3)
+     ->  Gather Motion 3:1  (slice4; segments: 3)
+           ->  Seq Scan on bar bar_1
+   ->  Seq Scan on bar
+ Optimizer: Postgres-based planner
+(8 rows)
+
+select (select a from bar)[(select 1)] from bar;
+ a 
+---
+ 1
+(1 row)
+
+explain (costs off) select (select b from bar)[1][1:3] from bar;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Gather Motion 3:1  (slice3; segments: 3)
+           ->  Seq Scan on bar bar_1
+   ->  Seq Scan on bar
+ Optimizer: Postgres-based planner
+(6 rows)
+
+select (select b from bar)[1][1:3] from bar;
+     b     
+-----------
+ {{1,2,3}}
+(1 row)
+
+explain (costs off) select (select b from bar)[(select 1)][1:3] from bar;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Result
+   InitPlan 2 (returns $1)  (slice3)
+     ->  Gather Motion 3:1  (slice4; segments: 3)
+           ->  Seq Scan on bar bar_1
+   ->  Seq Scan on bar
+ Optimizer: Postgres-based planner
+(8 rows)
+
+select (select b from bar)[(select 1)][1:3] from bar;
+     b     
+-----------
+ {{1,2,3}}
+(1 row)
+
+drop table bar;
