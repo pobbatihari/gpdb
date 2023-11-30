@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-  Objective: The plan should contain a single broadcast motion above the hash
-  join and should only broadcast from a single segment to the remaining
-  segments since the Limit taints the replicated distribution of hosttoast.
+  Objective: Orca should produce a plan without any motion when the outer table of a
+  HashInnerJoin is tainted replicated and the inner table is replicated
 
 CREATE TABLE snackbox (a int) DISTRIBUTED REPLICATED;
 CREATE TABLE hottoast (c int) DISTRIBUTED REPLICATED;
