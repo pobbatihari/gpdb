@@ -609,6 +609,10 @@ select count(*) from (select * from rep1 order by rep1.a) t1, hash t2 where t1.a
 explain (costs off) select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
 select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
 
+-- HashInnerJoin's outer child involves joining two replicated tables and inner as hash table
+explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
+select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
+
 delete from rep1;
 insert into rep1 select i, i/10.0 from generate_series(1, 10)i;
 insert into rand select i, i from generate_series(11, 100)i;
