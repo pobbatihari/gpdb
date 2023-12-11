@@ -132,33 +132,13 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 	{
 		CDistributionSpec *pds = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Pds();
 
-		if ((CDistributionSpec::EdtStrictReplicated == pds->Edt() ||
-			 CDistributionSpec::EdtTaintedReplicated == pds->Edt()) &&
-			CDistributionSpec::EdtHashed == PdsRequired()->Edt())
+		if (CDistributionSpec::EdtStrictReplicated == pds->Edt() &&
+			CDistributionSpec::EdtHashed == PdsRequired()->Edt() &&
+			EdmSatisfy == m_edm)
 		{
-			if (CDistributionSpec::EdtStrictReplicated == pds->Edt() &&
-				EdmSatisfy == m_edm)
-			{
-				// child delivers a replicated distribution, no need to enforce
-				// hashed distribution if only satisfiability is needed
-				return EpetUnnecessary;
-			}
-			else if (EdmExact == m_edm &&
-					 !CDistributionSpecHashed::PdsConvert(PdsRequired())
-						  ->FAllowReplicated())
-			{
-				// Prohibit the plan in which we enforce hashed
-				// distribution on outer child, and it results
-				// in a replicated distribution. This is
-				// because, we noticed that the hash join
-				// costing is inaccurate when the child is
-				// replicated, causing the cost of the (hash,
-				// hash) alternative low and thus chosen
-				// always, despite higher execution times. Therefore,
-				// we are prohibiting this alternative in favor of a
-				// better one, which is (broadcast, non-singleton)
-				return EpetProhibited;
-			}
+			// child delivers a replicated distribution, no need to enforce
+			// hashed distribution if only satisfiability is needed
+			return EpetUnnecessary;
 		}
 
 		if (CDistributionSpec::EdtNonSingleton == m_pds->Edt() &&

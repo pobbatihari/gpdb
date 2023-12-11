@@ -567,6 +567,8 @@ insert into hash select i, i from generate_series(1, 10)i;
 
 analyze rep1, rep2, rand, hash;
 
+set  optimizer_enable_motion_redistribute to off;
+
 -- HashInnerJoin should select rep1 as the outer child and rand as the inner child without any motions
 explain (costs off) select count(*) from rep1, rand where rep1.a = rand.b;
 select count(*) from rep1, rand where rep1.a = rand.b;
@@ -579,7 +581,6 @@ select count(*) from rep1, hash where rep1.a = hash.b;
 explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
 select count(*) from rep1, rep2 where rep1.a = rep2.a;
 
--- HashInnerJoin should select t1 as the outer child  with one time filter and rep1 as the inner child without any motions
 explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 
@@ -588,10 +589,8 @@ explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1,
 select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
 
 -- windowAgg on outer replicated child of HashInnerJoin
-set optimizer_enable_motion_redistribute to off;
 explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
 select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
-reset optimizer_enable_motion_redistribute;
 
 -- Union all on outer child (two replicated tables) of HashInnerJoin
 explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
@@ -613,33 +612,8 @@ select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
 explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
 select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
 
-delete from rep1;
-insert into rep1 select i, i/10.0 from generate_series(1, 10)i;
-insert into rand select i, i from generate_series(11, 100)i;
-insert into rep2 select i, i from generate_series(11, 100)i;
-insert into hash select i, i from generate_series(11, 100)i;
-analyze rep1, rep2, rand, hash;
-
--- HashInnerJoin should select rand as the outer child and rep1 as the inner child without any motions
-explain (costs off) select count(*) from rep1, rand where rep1.a = rand.b;
-select count(*) from rep1, rand where rep1.a = rand.b;
-
--- HashInnerJoin should select hash as the outer child and rep1 as the inner child without any motions
-explain (costs off) select count(*) from rep1, hash where rep1.a = hash.b;
-select count(*) from rep1, hash where rep1.a = hash.b;
-
--- HashInnerJoin should select rep2 as the outer child and rep1 as the inner child without any motions
-explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
-select count(*) from rep1, rep2 where rep1.a = rep2.a;
-
--- HashInnerJoin should select t1 as the outer child  with one time filter and rep1 as the inner child without any motions
-explain (costs off) select count(*) from rep1, generate_series(1, 100) t1 where rep1.a = t1;
-select count(*) from rep1, generate_series(1, 100) t1 where rep1.a = t1;
-
--- HashInnerJoin should choose <hash, hash > alternative
-explain (costs off) select count(*) from rand r1 join hash h1 on  r1.b = h1.b;
-select count(*) from rand r1 join hash h1 on  r1.b = h1.b;
 drop table rep1,rep2, rand, hash;
+reset optimizer_enable_motion_redistribute;
 
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
