@@ -40,14 +40,12 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CDistributionSpecHashed::CDistributionSpecHashed(CExpressionArray *pdrgpexpr,
 												 BOOL fNullsColocated,
-												 IMdIdArray *opfamilies,
-												 BOOL fAllowReplicated)
+												 IMdIdArray *opfamilies)
 	: m_pdrgpexpr(pdrgpexpr),
 	  m_opfamilies(opfamilies),
 	  m_fNullsColocated(fNullsColocated),
 	  m_pdshashedEquiv(nullptr),
-	  m_equiv_hash_exprs(nullptr),
-	  m_fAllowReplicated(fAllowReplicated)
+	  m_equiv_hash_exprs(nullptr)
 {
 	GPOS_ASSERT(nullptr != pdrgpexpr);
 	GPOS_ASSERT(0 < pdrgpexpr->Size());

@@ -52,10 +52,6 @@ private:
 	// HD1 satisfies HD2 if:
 	//	* HD1 colocates NULLs or
 	//  * HD2 doesn't care about NULLs
-
-	// should allow Replicated Distribution?
-	BOOL m_fAllowReplicated;
-
 	BOOL
 	FNullsColocatedCompatible(const CDistributionSpecHashed *pds) const
 	{
@@ -77,8 +73,7 @@ public:
 
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
-							IMdIdArray *opfamilies = nullptr,
-							BOOL fAllowReplicated = true);
+							IMdIdArray *opfamilies = nullptr);
 
 	// ctor
 	CDistributionSpecHashed(CExpressionArray *pdrgpexpr, BOOL fNullsColocated,
@@ -132,13 +127,6 @@ public:
 	Opfamilies() const
 	{
 		return m_opfamilies;
-	}
-
-	// should allow Replicated Distribution?
-	BOOL
-	FAllowReplicated() const
-	{
-		return m_fAllowReplicated;
 	}
 
 	// columns used by distribution expressions
