@@ -101,7 +101,8 @@ CPhysicalInnerHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// requests and is set to 1 because there is a single redistribute request
 	// (optreq 0). The subsequent check (OptReq < (1+3)) ensures that we
 	// invoke HashJoin::Ped() for optimization requests ranging from 1 to (N + 3).
-	if (ulOptReq < ulHashDistributeRequests + 3)
+	if (ulOptReq < ulHashDistributeRequests + 3 ||
+		exprhdl.NeedsSingletonExecution() || exprhdl.HasOuterRefs())
 	{
 		return CPhysicalHashJoin::Ped(mp, exprhdl, prppInput, child_index,
 									  pdrgpdpCtxt, ulOptReq);
@@ -112,31 +113,6 @@ CPhysicalInnerHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CEnfdDistribution::EDistributionMatching dmatch =
 		Edm(prppInput, child_index, pdrgpdpCtxt, ulOptReq);
 	CDistributionSpec *const pdsInput = prppInput->Ped()->PdsRequired();
-
-	// if expression has to execute on a single host then we need a gather
-	if (exprhdl.NeedsSingletonExecution())
-	{
-		return GPOS_NEW(mp) CEnfdDistribution(
-			PdsRequireSingleton(mp, exprhdl, pdsInput, child_index), dmatch);
-	}
-
-	// If the expression contains outer references, it is essential to make
-	// a replicated or singleton request to prevent inefficient
-	// distribution strategies. This helps avoid unnecessary data movement
-	// between nodes and the risk of suboptimal plans.
-	if (exprhdl.HasOuterRefs())
-	{
-		if (CDistributionSpec::EdtSingleton == pdsInput->Edt() ||
-			CDistributionSpec::EdtStrictReplicated == pdsInput->Edt())
-		{
-			return GPOS_NEW(mp) CEnfdDistribution(
-				PdsPassThru(mp, exprhdl, pdsInput, child_index), dmatch);
-		}
-		return GPOS_NEW(mp)
-			CEnfdDistribution(GPOS_NEW(mp) CDistributionSpecReplicated(
-								  CDistributionSpec::EdtStrictReplicated),
-							  dmatch);
-	}
 
 	// requests N+4 is (broadcast, non-singleton)
 	return GPOS_NEW(mp)

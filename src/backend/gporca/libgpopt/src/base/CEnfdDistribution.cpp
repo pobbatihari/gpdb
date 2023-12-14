@@ -147,9 +147,9 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 			return EpetProhibited;
 		}
 
-		// Apply the HashInnerJoin alternative (broadcast,
+		// Apply the InnerHashJoin alternative (broadcast,
 		// non-singleton) exclusively when the outer child of
-		// HashInnerJoin is replicated. Otherwise, we risk generating
+		// InnerHashJoin is replicated. Otherwise, we risk generating
 		// suboptimal plans by broadcasting the outer child using a
 		// different optimizaiton request. The criteria for prohibiting
 		// plans are as follows:

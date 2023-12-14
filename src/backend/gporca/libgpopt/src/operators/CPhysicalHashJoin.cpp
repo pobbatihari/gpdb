@@ -523,12 +523,12 @@ CPhysicalHashJoin::PdsRequiredOuterReplicated(CMemoryPool *mp,
 
 	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
 	{
-		// first child is StrictReplicate request second child to
+		// first child is strictreplicate request second child to
 		// execute non-singleton
 		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 	}
 
-	// otherwise, request second child to deliver Replicated distribution
+	// otherwise, request second child to deliver replicated distribution
 	return GPOS_NEW(mp) CDistributionSpecReplicated(
 		CDistributionSpec::EdtReplicated, false /*ignore_broadcast_threshold*/,
 		false /*fAllowEnforced*/);
