@@ -698,55 +698,6 @@ CPhysicalHashJoin::PdsRequiredSingleton(CMemoryPool *mp,
 		mp, CDistributionSpecSingleton::PdssConvert(pdsFirst));
 }
 
-//
-//---------------------------------------------------------------------------
-//	@function:
-//		CPhysicalHashJoin::PdsRequiredOuterReplicated
-//
-//	@doc:
-//		Create (broadcast, non-singleton) optimization request
-//
-//---------------------------------------------------------------------------
-CDistributionSpec *
-CPhysicalHashJoin::PdsRequiredOuterReplicated(CMemoryPool *mp,
-											  CExpressionHandle &,	// exprhdl
-											  CDistributionSpec *,	// pdsInput
-											  ULONG child_index,
-											  CDrvdPropArray *pdrgpdpCtxt) const
-{
-	GPOS_ASSERT(EceoRightToLeft == Eceo());
-
-	if (1 == child_index)
-	{
-		// require inner child to be non-singleton
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
-	}
-	GPOS_ASSERT(0 == child_index);
-
-	// require a matching distribution from outer child
-	CDistributionSpec *pdsInner =
-		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
-	GPOS_ASSERT(nullptr != pdsInner);
-
-	if (CDistributionSpec::EdtUniversal == pdsInner->Edt())
-	{
-		// first child is universal, request second child to execute on
-		// a single host to avoid duplicates
-		return GPOS_NEW(mp) CDistributionSpecSingleton();
-	}
-
-	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
-	{
-		// first child is StrictReplicate request second child to
-		// execute non-singleton
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
-	}
-
-	// otherwise, request second child to deliver Replicated distribution
-	return GPOS_NEW(mp) CDistributionSpecReplicated(
-		CDistributionSpec::EdtReplicated, false /*ignore_broadcast_threshold*/,
-		false /*fAllowEnforced*/);
-}
 
 //---------------------------------------------------------------------------
 //	@function:
