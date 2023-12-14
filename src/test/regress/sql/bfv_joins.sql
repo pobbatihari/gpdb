@@ -606,7 +606,7 @@ ANALYZE ext_stats_tbl;
 explain SELECT 1 FROM ext_stats_tbl t11 FULL JOIN ext_stats_tbl t12 ON t12.c2;
 
 --
--- Tests for HashInnerJoin alternative <replicated, non-replicated>
+-- Tests for InnerHashJoin alternative <replicated, non-replicated>
 --
 
 --start_ignore
@@ -630,46 +630,46 @@ analyze rep1, rep2, rand, hash;
 
 set  optimizer_enable_motion_redistribute to off;
 
--- HashInnerJoin should select rep1 as the outer child and rand as the inner child without any motions
+-- InnerHashJoin should select rep1 as the outer child and rand as the inner child without any motions
 explain (costs off) select count(*) from rep1, rand where rep1.a = rand.b;
 select count(*) from rep1, rand where rep1.a = rand.b;
 
--- HashInnerJoin should select rep1 as the outer child and hash  as the inner child without any motions
+-- InnerHashJoin should select rep1 as the outer child and hash  as the inner child without any motions
 explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
 select count(*) from rep1, hash where rep1.a = hash.b;
 
--- HashInnerJoin should select rep1 as the outer child and rep2 as the inner child without any motions
+-- InnerHashJoin should select rep1 as the outer child and rep2 as the inner child without any motions
 explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
 select count(*) from rep1, rep2 where rep1.a = rep2.a;
 
 explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 
--- Aggregate on outer replicated child of HashInnerJoin
+-- Aggregate on outer replicated child of InnerHashJoin
 explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
 select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
 
--- windowAgg on outer replicated child of HashInnerJoin
+-- windowAgg on outer replicated child of InnerHashJoin
 explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
 select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
 
--- Union all on outer child (two replicated tables) of HashInnerJoin
+-- Union all on outer child (two replicated tables) of InnerHashJoin
 explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
 select * from (select * from rep1 where rep1.a <= 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
 
--- Filer on outer replicated child of HashInnerJoin
+-- Filer on outer replicated child of InnerHashJoin
 explain (costs off) select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
 select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
 
--- Sort on outer replicated child of HashInnerJoin
+-- Sort on outer replicated child of InnerHashJoin
 explain (costs off) select count(*) from (select * from rep1 order by rep1.a) t1, hash t2 where t1.a = t2.a;
 select count(*) from (select * from rep1 order by rep1.a) t1, hash t2 where t1.a = t2.a;
 
--- Limit on outer replicated child of HashInnerJoin
+-- Limit on outer replicated child of InnerHashJoin
 explain (costs off) select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
 select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
 
--- HashInnerJoin's outer child involves joining two replicated tables and inner as hash table
+-- InnerHashJoin outer child involves joining two replicated tables and inner as hash table
 explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
 select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
 
