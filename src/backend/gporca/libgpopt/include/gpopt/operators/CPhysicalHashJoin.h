@@ -102,12 +102,6 @@ protected:
 											ULONG child_index,
 											CDrvdPropArray *pdrgpdpCtxt) const;
 
-	// create (replicate, non-singleton) optimization request
-	CDistributionSpec *PdsRequiredOuterReplicated(
-		CMemoryPool *mp, CExpressionHandle &exprhdl,
-		CDistributionSpec *pdsInput, ULONG child_index,
-		CDrvdPropArray *pdrgpdpCtxt) const;
-
 	// check whether the hash keys from one child are nullable
 	BOOL FNullableHashKeys(CColRefSet *pcrsNotNullInner, BOOL fInner) const;
 

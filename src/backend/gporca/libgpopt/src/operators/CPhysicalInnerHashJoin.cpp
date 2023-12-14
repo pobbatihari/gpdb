@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
@@ -67,6 +68,57 @@ CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 //
 //---------------------------------------------------------------------------
 CPhysicalInnerHashJoin::~CPhysicalInnerHashJoin() = default;
+
+
+//
+//---------------------------------------------------------------------------
+//	@function:
+//		CPhysicalHashJoin::PdsRequiredOuterReplicated
+//
+//	@doc:
+//		Create (broadcast, non-singleton) optimization request
+//
+//---------------------------------------------------------------------------
+CDistributionSpec *
+CPhysicalInnerHashJoin::PdsRequiredOuterReplicated(CMemoryPool *mp,
+												   CExpressionHandle &,	// exprhdl
+												   CDistributionSpec *,	// pdsInput
+												   ULONG child_index,
+												   CDrvdPropArray *pdrgpdpCtxt) const
+{
+	GPOS_ASSERT(EceoRightToLeft == Eceo());
+
+	if (1 == child_index)
+	{
+		// require inner child to be non-singleton
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+	}
+	GPOS_ASSERT(0 == child_index);
+
+	// require a matching distribution from outer child
+	CDistributionSpec *pdsInner =
+		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
+	GPOS_ASSERT(nullptr != pdsInner);
+
+	if (CDistributionSpec::EdtUniversal == pdsInner->Edt())
+	{
+		// inner child is universal, request outer child to execute on
+		// a single host to avoid duplicates
+		return GPOS_NEW(mp) CDistributionSpecSingleton();
+	}
+
+	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
+	{
+		// inner child is strict replicated, request outer child to
+		// execute non-singleton
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+	}
+
+	// otherwise, request outer child to deliver replicated distribution
+	return GPOS_NEW(mp) CDistributionSpecReplicated(
+		CDistributionSpec::EdtReplicated, false /*ignore_broadcast_threshold*/,
+		false /*fAllowEnforced*/);
+}
 
 //---------------------------------------------------------------------------
 //	@function:
