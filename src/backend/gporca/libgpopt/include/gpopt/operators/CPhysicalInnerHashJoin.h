@@ -48,6 +48,12 @@ private:
 		CMemoryPool *mp, CDistributionSpec *pdsOuter,
 		CDistributionSpec *pdsInner) const;
 
+	// create (replicate, non-singleton) optimization request
+	CDistributionSpec *PdsRequiredOuterReplicated(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CDistributionSpec *pdsInput, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt) const;
+
 public:
 	CPhysicalInnerHashJoin(const CPhysicalInnerHashJoin &) = delete;
 
