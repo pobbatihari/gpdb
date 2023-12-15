@@ -4078,6 +4078,7 @@ select count(*) from rep1, rep2 where rep1.a = rep2.a;
     10
 (1 row)
 
+-- InnerHashJoin with the inner child being universal
 explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
                       QUERY PLAN                       
 -------------------------------------------------------
@@ -4209,7 +4210,7 @@ select * from (select * from rep1 where rep1.a <= 10 union all select * from rep
  10 |  10 | 10 | 10
 (20 rows)
 
--- Filer on outer replicated child of InnerHashJoin
+-- Filter on outer replicated child of InnerHashJoin
 explain (costs off) select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
                 QUERY PLAN                
 ------------------------------------------
