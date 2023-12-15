@@ -642,6 +642,7 @@ select count(*) from rep1, hash where rep1.a = hash.b;
 explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
 select count(*) from rep1, rep2 where rep1.a = rep2.a;
 
+-- InnerHashJoin with the inner child being universal
 explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 
@@ -657,7 +658,7 @@ select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash 
 explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
 select * from (select * from rep1 where rep1.a <= 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
 
--- Filer on outer replicated child of InnerHashJoin
+-- Filter on outer replicated child of InnerHashJoin
 explain (costs off) select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
 select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
 
