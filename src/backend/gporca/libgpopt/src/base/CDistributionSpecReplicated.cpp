@@ -124,7 +124,7 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 //		because the replicated spec satisfies both StrictReplicated and
 //		TaintedReplicated specs
 //
-//		The Match() function is invoked when a replicated request is
+//		The Matches() function is invoked when a replicated request is
 //		made on the outer table. This is because, in
 //		CPhysicalJoin::Edm(), we set the distribution matching function
 //		for the outer request as EdmExact.
