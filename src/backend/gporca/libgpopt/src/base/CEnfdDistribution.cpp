@@ -165,9 +165,8 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		//     motion.
 		if (CDistributionSpec::EdtReplicated == m_pds->Edt() &&
 			!CDistributionSpecReplicated::PdsConvert(m_pds)->FAllowEnforced() &&
-			((CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
-			  CDistributionSpec::EdtTaintedReplicated != pds->Edt()) ||
-			 popPhysical->Eopid() == COperator::EopPhysicalMotionBroadcast))
+			(CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
+			  CDistributionSpec::EdtTaintedReplicated != pds->Edt()))
 		{
 			return EpetProhibited;
 		}
