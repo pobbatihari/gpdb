@@ -4278,7 +4278,7 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_max_slices", PGC_USERSET, PRESET_OPTIONS,
+		{"gp_max_slices", PGC_SUSET, PRESET_OPTIONS,
 			gettext_noop("Maximum slices for a single query"),
 			NULL,
 			GUC_NOT_IN_SAMPLE
