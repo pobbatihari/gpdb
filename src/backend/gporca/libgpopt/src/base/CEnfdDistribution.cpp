@@ -151,18 +151,17 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		// non-singleton) exclusively when the outer child of
 		// InnerHashJoin is replicated. Otherwise, we risk generating
 		// suboptimal plans by broadcasting the outer child using a
-		// different optimization request. The criteria for prohibiting
-		// plans are as follows:
-		// When the outer table required distribution spec is
-		// replicated, FAllowEnforced is set to false,
-		//   - Verify that the derived distribution is neither
-		//     StrictReplicated nor TaintedReplicated.
-		//     (or)
-		//   - Verify whether the operator is a
-		//     PhysicalMotionBroadcast. This check is essential because
-		//     there are scenarios where a different optimization
-		//     request within the same group may enforce broadcast
-		//     motion.
+		// different optimization request. Therefore, we are prohibiting the
+		// enforcer under the following conditions:
+		// 1. If it is a broadcast outer request, indicated by the
+		// fAllowedEnforced = false flag (set to true for the broadcast
+		// inner request).
+		// 2. If the input distribution spec is not already replicated,
+		// or if the input distribution is replicated due to an
+		// enforcer introduced by another request. An example of the
+		// latter is when a broadcast motion is applied to a
+		// non-replicated table on the inner side due to a
+		// commutativity transformation.
 		if (CDistributionSpec::EdtReplicated == m_pds->Edt() &&
 			!CDistributionSpecReplicated::PdsConvert(m_pds)->FAllowEnforced() &&
 			((CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
