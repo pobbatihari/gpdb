@@ -147,12 +147,12 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 			return EpetProhibited;
 		}
 
-		// Apply the InnerHashJoin alternative (broadcast,
-		// non-singleton) exclusively when the outer child of
-		// InnerHashJoin is replicated. Otherwise, we risk generating
+		// Restrict the InnerHashJoin alternative (broadcast,
+		// non-singleton) to cases where the outer child holds a
+		// replicated distribution. Otherwise, we risk generating
 		// suboptimal plans by broadcasting the outer child using a
-		// different optimization request. Therefore, we are prohibiting the
-		// enforcer under the following conditions:
+		// different optimization request. Therefore, we are
+		// prohibiting the enforcer under the following conditions:
 		// 1. If it is a broadcast outer request, indicated by the
 		// fAllowedEnforced = false flag (set to true for the broadcast
 		// inner request).
@@ -162,6 +162,29 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		// latter is when a broadcast motion is applied to a
 		// non-replicated table on the inner side due to a
 		// commutativity transformation.
+		//
+		// By prohibiting the enforcer, we disregard the optimization
+		// context, irrespective of whether the input distribution spec
+		// meets the requested spec. This leaves the optimization
+		// context without a best group expression, causing the
+		// optimization context to be bypassed by the cost model.
+		//
+		// Note: We are aware the changes proposed by this PR
+		// circumvents the cost model. And in certain scenarios,
+		// broadcasting a non-replicated outer may yield better
+		// performance, but isn't permitted by this PR. This approach
+		// is deliberately chosen to minimize disruptions to current
+		// plans and introduce a plan alternative only under particular
+		// circumstances.
+		//
+		// Eg. two small distributed tables with equal tuples joining on
+		// the non-distribution key
+		// In this case, broadcasting the outer table is better than
+		// broadcasting the inner one. Since we always hash the inner
+		// table, the hashing cost of a distributed table is lower than
+		// that of a replicated table.  However, as detailed by the
+		// reasoning above, broadcasting a distributed outer isn't
+		// permitted by this PR.
 		if (CDistributionSpec::EdtReplicated == m_pds->Edt() &&
 			!CDistributionSpecReplicated::PdsConvert(m_pds)->FAllowEnforced() &&
 			((CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
