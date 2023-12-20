@@ -4649,6 +4649,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_max_system_slices", PGC_SUSET, PRESET_OPTIONS,
+			gettext_noop("Maximum slices for a single query"),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_max_slices,
+		0, 0, INT_MAX, NULL, NULL
+	},
+
+	{
 		{"gp_dispatch_keepalives_idle", PGC_POSTMASTER, GP_ARRAY_TUNING,
 			gettext_noop("Time between issuing TCP keepalives from GPDB QD to its QEs."),
 			gettext_noop("A value of 0 uses the system default."),
