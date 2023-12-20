@@ -613,68 +613,87 @@ explain SELECT 1 FROM ext_stats_tbl t11 FULL JOIN ext_stats_tbl t12 ON t12.c2;
 drop table if exists rep1;
 drop table if exists rep2;
 drop table if exists rand;
-drop table if exists hash;
+drop table if exists hash_dist;
 --end_ignore
 
 create table rep1 (a int , b float) distributed replicated;
 create table rep2 (a int , b int) distributed replicated;
 create table rand (a int , b int) distributed randomly;
-create table hash (a int, b int) distributed by (a);
+create table hash_dist (a int, b int) distributed by (a);
 
 insert into rep1 select i, i/10.0 from generate_series(1, 100)i;
 insert into rep2 select i, i from generate_series(1, 10)i;
 insert into rand select i, i from generate_series(1, 10)i;
-insert into hash select i, i from generate_series(1, 10)i;
+insert into hash_dist select i, i from generate_series(1, 10)i;
 
-analyze rep1, rep2, rand, hash;
+analyze rep1, rep2, rand, hash_dist;
 
 set  optimizer_enable_motion_redistribute to off;
 
 -- InnerHashJoin should select rep1 as the outer child and rand as the inner child without any motions
-explain (costs off) select count(*) from rep1, rand where rep1.a = rand.b;
+-- because the hashing cost of rand is lower
+explain (costs off) select * from rep1, rand where rep1.a = rand.b;
 select count(*) from rep1, rand where rep1.a = rand.b;
 
--- InnerHashJoin should select rep1 as the outer child and hash  as the inner child without any motions
-explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
-select count(*) from rep1, hash where rep1.a = hash.b;
+-- InnerHashJoin should select rep1 as the outer child and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from rep1, hash_dist where rep1.b = hash_dist.b;
+select count(*) from rep1, hash_dist where rep1.a = hash_dist.b;
 
 -- InnerHashJoin should select rep1 as the outer child and rep2 as the inner child without any motions
-explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
+-- because hashing cost of rep2 is lower
+explain (costs off) select * from rep1, rep2 where rep1.a = rep2.a;
 select count(*) from rep1, rep2 where rep1.a = rep2.a;
 
 -- InnerHashJoin with the inner child being universal
+-- InnerHashJoin should select gather motion with rep1 as outer and universal as the inner child without any motions
+-- because hashing cost of universal is lower
 explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 
 -- Aggregate on outer replicated child of InnerHashJoin
-explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
-select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
+-- InnerHashJoin should select HashAggregate of rep1 as outer and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1, hash_dist t2 where t1.a = t2.b;
+select *  from (select rep1.a from rep1 group by rep1.a) t1, hash_dist t2 where t1.a = t2.b;
 
 -- windowAgg on outer replicated child of InnerHashJoin
-explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
-select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
+-- InnerHashJoin should select WindowAgg with rep1 as the outer child and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
+select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
 
 -- Union all on outer child (two replicated tables) of InnerHashJoin
-explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
-select * from (select * from rep1 where rep1.a <= 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
+-- InnerHashJoin should select union all of rep1 and rep2 as the outer child(tainted replicated) and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash_dist t2 where t1.a = t2.a;
+select * from (select * from rep1 where rep1.a <= 10 union all select * from rep2) t1, hash_dist t2 where t1.a = t2.a;
 
 -- Filter on outer replicated child of InnerHashJoin
-explain (costs off) select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
-select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
+-- InnerHashJoin should select rep1 as the outer child(tainted replicated) and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 where rep1.a = 1) t1, hash_dist t2 where t1.a = t2.a;
+select * from (select * from rep1 where rep1.a = 1) t1, hash_dist t2 where t1.a = t2.a;
 
 -- Sort on outer replicated child of InnerHashJoin
-explain (costs off) select count(*) from (select * from rep1 order by rep1.a) t1, hash t2 where t1.a = t2.a;
-select count(*) from (select * from rep1 order by rep1.a) t1, hash t2 where t1.a = t2.a;
+-- InnerHashJoin should select rep1 as the outer child and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 order by rep1.a) t1, hash_dist t2 where t1.a = t2.a;
+select count(*) from (select * from rep1 order by rep1.a) t1, hash_dist t2 where t1.a = t2.a;
 
 -- Limit on outer replicated child of InnerHashJoin
-explain (costs off) select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
-select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
+-- InnerHashJoin should select limit on rep1 as the outer child and hash_dist as the inner child
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 limit 10) t1, hash_dist t2 where t1.a = t2.a;
+select count(*) from (select * from rep1 limit 5) t1, hash_dist t2 where t1.a = t2.a;
 
 -- InnerHashJoin outer child involves joining two replicated tables and inner as hash table
-explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
-select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
+-- InnerHashJoin should select rep1 as the outer child and hash  as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
+select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
 
-drop table rep1,rep2, rand, hash;
+drop table rep1,rep2, rand, hash_dist;
 reset optimizer_enable_motion_redistribute;
 
 -- Clean up. None of the objects we create are very interesting to keep around.

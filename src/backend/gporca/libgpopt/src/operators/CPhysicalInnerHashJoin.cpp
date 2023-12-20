@@ -73,7 +73,7 @@ CPhysicalInnerHashJoin::~CPhysicalInnerHashJoin() = default;
 //
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalHashJoin::PdsRequiredOuterReplicated
+//		CPhysicalInnerHashJoin::PdsRequiredOuterReplicated
 //
 //	@doc:
 //		Create (broadcast, non-singleton) optimization request

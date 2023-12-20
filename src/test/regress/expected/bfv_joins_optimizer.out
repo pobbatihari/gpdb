@@ -4206,33 +4206,32 @@ drop table if exists rep2;
 NOTICE:  table "rep2" does not exist, skipping
 drop table if exists rand;
 NOTICE:  table "rand" does not exist, skipping
-drop table if exists hash;
-NOTICE:  table "hash" does not exist, skipping
+drop table if exists hash_dist;
+NOTICE:  table "hash_dist" does not exist, skipping
 --end_ignore
 create table rep1 (a int , b float) distributed replicated;
 create table rep2 (a int , b int) distributed replicated;
 create table rand (a int , b int) distributed randomly;
-create table hash (a int, b int) distributed by (a);
+create table hash_dist (a int, b int) distributed by (a);
 insert into rep1 select i, i/10.0 from generate_series(1, 100)i;
 insert into rep2 select i, i from generate_series(1, 10)i;
 insert into rand select i, i from generate_series(1, 10)i;
-insert into hash select i, i from generate_series(1, 10)i;
-analyze rep1, rep2, rand, hash;
+insert into hash_dist select i, i from generate_series(1, 10)i;
+analyze rep1, rep2, rand, hash_dist;
 set  optimizer_enable_motion_redistribute to off;
 -- InnerHashJoin should select rep1 as the outer child and rand as the inner child without any motions
-explain (costs off) select count(*) from rep1, rand where rep1.a = rand.b;
-                    QUERY PLAN                    
---------------------------------------------------
- Finalize Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Hash Join
-                     Hash Cond: (rep1.a = rand.b)
-                     ->  Seq Scan on rep1
-                     ->  Hash
-                           ->  Seq Scan on rand
+-- because the hashing cost of rand is lower
+explain (costs off) select * from rep1, rand where rep1.a = rand.b;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rep1.a = rand.b)
+         ->  Seq Scan on rep1
+         ->  Hash
+               ->  Seq Scan on rand
  Optimizer: GPORCA
-(9 rows)
+(7 rows)
 
 select count(*) from rep1, rand where rep1.a = rand.b;
  count 
@@ -4240,41 +4239,39 @@ select count(*) from rep1, rand where rep1.a = rand.b;
     10
 (1 row)
 
--- InnerHashJoin should select rep1 as the outer child and hash  as the inner child without any motions
-explain (costs off) select count(*) from rep1, hash where rep1.b = hash.b;
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Finalize Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Hash Join
-                     Hash Cond: (rep1.b = (hash.b)::double precision)
-                     ->  Seq Scan on rep1
-                     ->  Hash
-                           ->  Seq Scan on hash
+-- InnerHashJoin should select rep1 as the outer child and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from rep1, hash_dist where rep1.b = hash_dist.b;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rep1.b = (hash_dist.b)::double precision)
+         ->  Seq Scan on rep1
+         ->  Hash
+               ->  Seq Scan on hash_dist
  Optimizer: GPORCA
-(9 rows)
+(7 rows)
 
-select count(*) from rep1, hash where rep1.a = hash.b;
+select count(*) from rep1, hash_dist where rep1.a = hash_dist.b;
  count 
 -------
     10
 (1 row)
 
 -- InnerHashJoin should select rep1 as the outer child and rep2 as the inner child without any motions
-explain (costs off) select count(*) from rep1, rep2 where rep1.a = rep2.a;
-                    QUERY PLAN                    
---------------------------------------------------
- Finalize Aggregate
-   ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Partial Aggregate
-               ->  Hash Join
-                     Hash Cond: (rep1.a = rep2.a)
-                     ->  Seq Scan on rep1
-                     ->  Hash
-                           ->  Seq Scan on rep2
+-- because hashing cost of rep2 is lower
+explain (costs off) select * from rep1, rep2 where rep1.a = rep2.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Hash Join
+         Hash Cond: (rep1.a = rep2.a)
+         ->  Seq Scan on rep1
+         ->  Hash
+               ->  Seq Scan on rep2
  Optimizer: GPORCA
-(9 rows)
+(7 rows)
 
 select count(*) from rep1, rep2 where rep1.a = rep2.a;
  count 
@@ -4283,6 +4280,8 @@ select count(*) from rep1, rep2 where rep1.a = rep2.a;
 (1 row)
 
 -- InnerHashJoin with the inner child being universal
+-- InnerHashJoin should select gather motion with rep1 as outer and universal as the inner child without any motions
+-- because hashing cost of universal is lower
 explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
                        QUERY PLAN                        
 ---------------------------------------------------------
@@ -4311,21 +4310,23 @@ select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
 (10 rows)
 
 -- Aggregate on outer replicated child of InnerHashJoin
-explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
-                QUERY PLAN                
-------------------------------------------
+-- InnerHashJoin should select HashAggregate of rep1 as outer and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1, hash_dist t2 where t1.a = t2.b;
+                QUERY PLAN                 
+-------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (rep1.a = hash.b)
+         Hash Cond: (rep1.a = hash_dist.b)
          ->  HashAggregate
                Group Key: rep1.a
                ->  Seq Scan on rep1
          ->  Hash
-               ->  Seq Scan on hash
+               ->  Seq Scan on hash_dist
  Optimizer: GPORCA
 (9 rows)
 
-select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a = t2.b;
+select *  from (select rep1.a from rep1 group by rep1.a) t1, hash_dist t2 where t1.a = t2.b;
  a  | a  | b  
 ----+----+----
   1 |  1 |  1
@@ -4341,23 +4342,25 @@ select *  from (select rep1.a from rep1 group by rep1.a) t1, hash t2 where t1.a 
 (10 rows)
 
 -- windowAgg on outer replicated child of InnerHashJoin
-explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
+-- InnerHashJoin should select WindowAgg with rep1 as the outer child and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.04 rows=100 width=16)
    ->  Hash Join  (cost=0.00..862.04 rows=34 width=16)
-         Hash Cond: ((sum(rep1.a) OVER (?)) = (hash.a)::bigint)
+         Hash Cond: ((sum(rep1.a) OVER (?)) = (hash_dist.a)::bigint)
          ->  WindowAgg  (cost=0.00..431.02 rows=100 width=8)
                Partition By: rep1.a
                ->  Sort  (cost=0.00..431.02 rows=100 width=4)
                      Sort Key: rep1.a
                      ->  Seq Scan on rep1  (cost=0.00..431.00 rows=100 width=4)
          ->  Hash  (cost=431.00..431.00 rows=4 width=8)
-               ->  Seq Scan on hash  (cost=0.00..431.00 rows=4 width=8)
+               ->  Seq Scan on hash_dist  (cost=0.00..431.00 rows=4 width=8)
  Optimizer: GPORCA
 (11 rows)
 
-select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash where t2.sum=hash.a;
+select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
  sum | a  | b  
 -----+----+----
    5 |  5 |  5
@@ -4373,22 +4376,24 @@ select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash 
 (10 rows)
 
 -- Union all on outer child (two replicated tables) of InnerHashJoin
-explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
-                QUERY PLAN                
-------------------------------------------
+-- InnerHashJoin should select union all of rep1 and rep2 as the outer child(tainted replicated) and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 where rep1.a < 10 union all select * from rep2) t1, hash_dist t2 where t1.a = t2.a;
+                QUERY PLAN                 
+-------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (rep1.a = hash.a)
+         Hash Cond: (rep1.a = hash_dist.a)
          ->  Append
                ->  Seq Scan on rep1
                      Filter: (a < 10)
                ->  Seq Scan on rep2
          ->  Hash
-               ->  Seq Scan on hash
+               ->  Seq Scan on hash_dist
  Optimizer: GPORCA
 (10 rows)
 
-select * from (select * from rep1 where rep1.a <= 10 union all select * from rep2) t1, hash t2 where t1.a = t2.a;
+select * from (select * from rep1 where rep1.a <= 10 union all select * from rep2) t1, hash_dist t2 where t1.a = t2.a;
  a  |  b  | a  | b  
 ----+-----+----+----
   2 | 0.2 |  2 |  2
@@ -4414,89 +4419,93 @@ select * from (select * from rep1 where rep1.a <= 10 union all select * from rep
 (20 rows)
 
 -- Filter on outer replicated child of InnerHashJoin
-explain (costs off) select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
-                QUERY PLAN                
-------------------------------------------
+-- InnerHashJoin should select rep1 as the outer child(tainted replicated) and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 where rep1.a = 1) t1, hash_dist t2 where t1.a = t2.a;
+                QUERY PLAN                 
+-------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (rep1.a = hash.a)
+         Hash Cond: (rep1.a = hash_dist.a)
          ->  Seq Scan on rep1
                Filter: (a = 1)
          ->  Hash
-               ->  Seq Scan on hash
+               ->  Seq Scan on hash_dist
                      Filter: (a = 1)
  Optimizer: GPORCA
 (9 rows)
 
-select * from (select * from rep1 where rep1.a = 1) t1, hash t2 where t1.a = t2.a;
+select * from (select * from rep1 where rep1.a = 1) t1, hash_dist t2 where t1.a = t2.a;
  a |  b  | a | b 
 ---+-----+---+---
  1 | 0.1 | 1 | 1
 (1 row)
 
 -- Sort on outer replicated child of InnerHashJoin
-explain (costs off) select count(*) from (select * from rep1 order by rep1.a) t1, hash t2 where t1.a = t2.a;
-                    QUERY PLAN                    
---------------------------------------------------
- Finalize Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Hash Join
-                     Hash Cond: (rep1.a = hash.a)
-                     ->  Seq Scan on rep1
-                     ->  Hash
-                           ->  Seq Scan on hash
+-- InnerHashJoin should select rep1 as the outer child and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 order by rep1.a) t1, hash_dist t2 where t1.a = t2.a;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rep1.a = hash_dist.a)
+         ->  Seq Scan on rep1
+         ->  Hash
+               ->  Seq Scan on hash_dist
  Optimizer: GPORCA
-(9 rows)
+(7 rows)
 
-select count(*) from (select * from rep1 order by rep1.a) t1, hash t2 where t1.a = t2.a;
+select count(*) from (select * from rep1 order by rep1.a) t1, hash_dist t2 where t1.a = t2.a;
  count 
 -------
     10
 (1 row)
 
 -- Limit on outer replicated child of InnerHashJoin
-explain (costs off) select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Hash Join
-               Hash Cond: (hash.a = rep1.a)
-               ->  Seq Scan on hash
-               ->  Hash
-                     ->  Broadcast Motion 1:3  (slice2)
-                           ->  Limit
-                                 ->  Gather Motion 1:1  (slice3; segments: 1)
-                                       ->  Limit
-                                             ->  Seq Scan on rep1
+-- InnerHashJoin should select limit on rep1 as the outer child and hash_dist as the inner child
+-- because hashing cost of hash_dist is lower
+explain (costs off) select * from (select * from rep1 limit 10) t1, hash_dist t2 where t1.a = t2.a;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Hash Join
+   Hash Cond: (rep1.a = hash_dist.a)
+   ->  Limit
+         ->  Gather Motion 1:1  (slice1; segments: 1)
+               ->  Limit
+                     ->  Seq Scan on rep1
+   ->  Hash
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on hash_dist
  Optimizer: GPORCA
-(12 rows)
+(10 rows)
 
-select count(*) from (select * from rep1 limit 5) t1, hash t2 where t1.a = t2.a;
+select count(*) from (select * from rep1 limit 5) t1, hash_dist t2 where t1.a = t2.a;
  count 
 -------
      5
 (1 row)
 
 -- InnerHashJoin outer child involves joining two replicated tables and inner as hash table
-explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
-                 QUERY PLAN                 
---------------------------------------------
+-- InnerHashJoin should select rep1 as the outer child and hash  as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
+                   QUERY PLAN                    
+-------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (rep1.a = rep2.b)
          ->  Hash Join
-               Hash Cond: (rep1.a = hash.a)
+               Hash Cond: (rep1.a = hash_dist.a)
                ->  Seq Scan on rep1
                ->  Hash
-                     ->  Seq Scan on hash
+                     ->  Seq Scan on hash_dist
          ->  Hash
                ->  Seq Scan on rep2
  Optimizer: GPORCA
 (11 rows)
 
-select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash t2 where t1.a = t2.a;
+select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
  a  | a  
 ----+----
   5 |  5
@@ -4511,7 +4520,7 @@ select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1,
   8 |  8
 (10 rows)
 
-drop table rep1,rep2, rand, hash;
+drop table rep1,rep2, rand, hash_dist;
 reset optimizer_enable_motion_redistribute;
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;

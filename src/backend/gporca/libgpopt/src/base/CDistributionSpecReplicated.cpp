@@ -118,10 +118,9 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 //		CDistributionSpecReplicated::Matches
 //
 //	@doc:
-//		Check whether the required distribution spec is identical to
-//		the derived spec or, required distribution spec is replicated
-//		because the replicated spec satisfies both StrictReplicated and
-//		TaintedReplicated specs
+//		Check whether this spec matches the given spec or, this spec is
+//		replicated because the replicated spec is compatible with both
+//		StrictReplicated and TaintedReplicated specs
 //
 //		The Matches() function is invoked when a replicated request is
 //		made on the outer table. This is because, in
