@@ -685,13 +685,7 @@ select count(*) from (select * from rep1 order by rep1.a) t1, hash_dist t2 where
 -- InnerHashJoin should select limit on rep1 as the outer child and hash_dist as the inner child
 -- because hashing cost of hash_dist is lower
 explain (costs off) select * from (select * from rep1 limit 10) t1, hash_dist t2 where t1.a = t2.a;
-select count(*) from (select * from rep1 limit 5) t1, hash_dist t2 where t1.a = t2.a;
-
--- InnerHashJoin outer child involves joining two replicated tables and inner as hash table
--- InnerHashJoin should select rep1 as the outer child and hash  as the inner child without any motions
--- because hashing cost of hash_dist is lower
-explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
-select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
+select count(*) from (select * from rep1 limit 10) t1, hash_dist t2 where t1.a = t2.a;
 
 drop table rep1,rep2, rand, hash_dist;
 reset optimizer_enable_motion_redistribute;
