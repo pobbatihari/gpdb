@@ -4480,45 +4480,11 @@ explain (costs off) select * from (select * from rep1 limit 10) t1, hash_dist t2
  Optimizer: GPORCA
 (10 rows)
 
-select count(*) from (select * from rep1 limit 5) t1, hash_dist t2 where t1.a = t2.a;
+select count(*) from (select * from rep1 limit 10) t1, hash_dist t2 where t1.a = t2.a;
  count 
 -------
-     5
+    10
 (1 row)
-
--- InnerHashJoin outer child involves joining two replicated tables and inner as hash table
--- InnerHashJoin should select rep1 as the outer child and hash  as the inner child without any motions
--- because hashing cost of hash_dist is lower
-explain (costs off) select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
-                   QUERY PLAN                    
--------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   ->  Hash Join
-         Hash Cond: (rep1.a = rep2.b)
-         ->  Hash Join
-               Hash Cond: (rep1.a = hash_dist.a)
-               ->  Seq Scan on rep1
-               ->  Hash
-                     ->  Seq Scan on hash_dist
-         ->  Hash
-               ->  Seq Scan on rep2
- Optimizer: GPORCA
-(11 rows)
-
-select t1.a, t2.a from (select rep1.a from rep1, rep2 where rep1.a = rep2.b) t1, hash_dist t2 where t1.a = t2.a;
- a  | a  
-----+----
-  5 |  5
-  6 |  6
-  9 |  9
- 10 | 10
-  1 |  1
-  2 |  2
-  3 |  3
-  4 |  4
-  7 |  7
-  8 |  8
-(10 rows)
 
 drop table rep1,rep2, rand, hash_dist;
 reset optimizer_enable_motion_redistribute;

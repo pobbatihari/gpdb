@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonReplicated.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CUtils.h"
@@ -44,18 +45,12 @@ CPhysicalInnerHashJoin::CPhysicalInnerHashJoin(
 {
 	// number of total requests created by InnerHashJoin
 	ULONG ulDistrReqs = GPOPT_NON_HASH_DIST_REQUESTS + NumDistrReq();
-	SetDistrRequests(ulDistrReqs);
 
-	if ((GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDP) &&
-		 GPOPT_FDISABLED_XFORM(CXform::ExfExpandNAryJoinDPv2)) ||
-		this->OriginXform() == CXform::ExfExpandNAryJoinGreedy)
-	{
-		SetPartPropagateRequests(2);
-	}
-	else
-	{
-		SetPartPropagateRequests(1);
-	}
+	//InnerHashJoin creates one more distribution request compared to
+	//(outer) HashJoin does. The SetDistrRequests() function call
+	//overwrites the distribution requests set in the base class
+	//CPhysicalHashJoin.
+	SetDistrRequests(ulDistrReqs);
 }
 
 
@@ -102,9 +97,9 @@ CPhysicalInnerHashJoin::PdsRequiredOuterReplicated(
 
 	if (CDistributionSpec::EdtUniversal == pdsInner->Edt())
 	{
-		// inner child is universal, request outer child to execute on
-		// a single host to avoid duplicates
-		return GPOS_NEW(mp) CDistributionSpecSingleton();
+		// inner child is universal, request outer child to
+		// be non duplicated, i.e. non-replicated.
+		return GPOS_NEW(mp) CDistributionSpecNonReplicated();
 	}
 
 	if (CDistributionSpec::EdtStrictReplicated == pdsInner->Edt())
