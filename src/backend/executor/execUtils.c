@@ -1757,13 +1757,22 @@ InitSliceTable(EState *estate, int nMotions, int nSubplans)
 	int			i,
 				n;
 	MemoryContext oldcontext;
+	int		max_slices;
 
 	n = 1 + nMotions + nSubplans;
 
-	if (gp_max_slices > 0 && n > gp_max_slices)
+	/*
+	 * gp_max_system_slices should take precedence as it is configured by a superuser
+	 */
+	if (gp_max_system_slices > 0)
+		max_slices = gp_max_system_slices;
+	else
+		max_slices = gp_max_slices;
+
+	if (max_slices > 0 && n > max_slices)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("at most %d slices are allowed in a query, current number: %d", gp_max_slices, n),
+				 errmsg("at most %d slices are allowed in a query, current number: %d", max_slices, n),
 				 errhint("rewrite your query")));
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
