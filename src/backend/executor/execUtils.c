@@ -1175,8 +1175,8 @@ InitSliceTable(EState *estate, PlannedStmt *plannedstmt)
 	 * and `gp_max_system_slices`, otherwise use `gp_max_slices`
 	 */
 	max_slices = (gp_max_system_slices > 0) ?
-		((gp_max_slices < gp_max_system_slices) ? gp_max_slices : gp_max_system_slices)
-		: gp_max_slices;
+		((gp_max_slices > 0 && gp_max_slices < gp_max_system_slices) ?
+		 gp_max_slices : gp_max_system_slices) : gp_max_slices;
 
 	if (max_slices > 0 && numSlices > max_slices)
 		ereport(ERROR,

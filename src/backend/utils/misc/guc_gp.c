@@ -4289,7 +4289,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"gp_max_system_slices", PGC_SUSET, PRESET_OPTIONS,
-			gettext_noop("Maximum slices for a single query by a superuser"),
+			gettext_noop("Maximum slices for a single query (superuser guc)"),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
