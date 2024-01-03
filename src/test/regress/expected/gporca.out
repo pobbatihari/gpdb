@@ -14877,11 +14877,12 @@ reset gp_max_slices;
 explain (costs off) select foo.a, foo.b from foo, bar where foo.b=bar.b;
 ERROR:  at most 1 slices are allowed in a query, current number: 4
 HINT:  rewrite your query
+reset gp_max_system_slices;
 -- Ensure that a regular user cannot set the GUC gp_max_system_slices
-create user test;
-set session authorization test;
+create user ruser;
+set session authorization ruser;
 set gp_max_system_slices=10;
 ERROR:  permission denied to set parameter "gp_max_system_slices"
 reset session authorization;
-drop user test;
+drop user ruser;
 drop table foo, bar;

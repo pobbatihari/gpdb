@@ -3661,14 +3661,15 @@ explain (costs off) select foo.a, foo.b from foo, bar where foo.b=bar.b;
 set gp_max_system_slices=1;
 reset gp_max_slices;
 explain (costs off) select foo.a, foo.b from foo, bar where foo.b=bar.b;
+reset gp_max_system_slices;
 
 -- Ensure that a regular user cannot set the GUC gp_max_system_slices
-create user test;
-set session authorization test;
+create user ruser;
+set session authorization ruser;
 set gp_max_system_slices=10;
 reset session authorization;
 
-drop user test;
+drop user ruser;
 drop table foo, bar;
 
 -- start_ignore
