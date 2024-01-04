@@ -14918,7 +14918,7 @@ EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM schema_test_table WHERE 1=0;
 
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
--- Test ALL NULL scalar array compare
+-- Test ALL NULL scalar array compare 
 create table DatumSortedSet_core (a int, b character varying NOT NULL) distributed by (a);
 explain select * from DatumSortedSet_core where b in (NULL, NULL);
                 QUERY PLAN
