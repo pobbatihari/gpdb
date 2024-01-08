@@ -185,7 +185,7 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		// that of a replicated table.  However, as detailed by the
 		// reasoning above, broadcasting a distributed outer isn't
 		// permitted by this PR.
-		if (CDistributionSpec::EdtReplicated == m_pds->Edt() &&
+		if (CDistributionSpec::EdtStrictReplicated == m_pds->Edt() &&
 			!CDistributionSpecReplicated::PdsConvert(m_pds)->FAllowEnforced() &&
 			((CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
 			  CDistributionSpec::EdtTaintedReplicated != pds->Edt()) ||

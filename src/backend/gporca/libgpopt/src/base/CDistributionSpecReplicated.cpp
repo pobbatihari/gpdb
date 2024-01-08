@@ -113,27 +113,6 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 	return false;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CDistributionSpecReplicated::Matches
-//
-//	@doc:
-//		Check whether this spec matches the given spec or, this spec is
-//		replicated because the replicated spec matches both
-//		StrictReplicated and TaintedReplicated specs
-//
-//		The Matches() function is invoked when a replicated request is
-//		made on the outer table. This is because, in
-//		CPhysicalJoin::Edm(), we set the distribution matching function
-//		for the outer request as EdmExact.
-//---------------------------------------------------------------------------
-BOOL
-CDistributionSpecReplicated::Matches(const CDistributionSpec *pds) const
-{
-	return (Edt() == pds->Edt() ||
-			CDistributionSpec::EdtReplicated == pds->Edt());
-}
-
 void
 CDistributionSpecReplicated::AppendEnforcers(CMemoryPool *mp,
 											 CExpressionHandle &,  // exprhdl
