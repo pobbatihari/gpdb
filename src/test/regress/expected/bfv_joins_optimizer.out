@@ -4259,56 +4259,6 @@ select count(*) from rep1, hash_dist where rep1.a = hash_dist.b;
     10
 (1 row)
 
--- InnerHashJoin should select rep1 as the outer child and rep2 as the inner child without any motions
--- because hashing cost of rep2 is lower
-explain (costs off) select * from rep1, rep2 where rep1.a = rep2.a;
-                QUERY PLAN                
-------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)
-   ->  Hash Join
-         Hash Cond: (rep1.a = rep2.a)
-         ->  Seq Scan on rep1
-         ->  Hash
-               ->  Seq Scan on rep2
- Optimizer: GPORCA
-(7 rows)
-
-select count(*) from rep1, rep2 where rep1.a = rep2.a;
- count 
--------
-    10
-(1 row)
-
--- InnerHashJoin with the inner child being universal
--- InnerHashJoin should select gather motion with rep1 as outer and universal as the inner child without any motions
--- because hashing cost of universal is lower
-explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
-                       QUERY PLAN                        
----------------------------------------------------------
- Hash Join
-   Hash Cond: (rep1.a = generate_series.generate_series)
-   ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Seq Scan on rep1
-   ->  Hash
-         ->  Function Scan on generate_series
- Optimizer: GPORCA
-(7 rows)
-
-select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
- a  |  b  | t1 
-----+-----+----
-  1 | 0.1 |  1
-  2 | 0.2 |  2
-  3 | 0.3 |  3
-  4 | 0.4 |  4
-  5 | 0.5 |  5
-  6 | 0.6 |  6
-  7 | 0.7 |  7
-  8 | 0.8 |  8
-  9 | 0.9 |  9
- 10 |   1 | 10
-(10 rows)
-
 -- Aggregate on outer replicated child of InnerHashJoin
 -- InnerHashJoin should select HashAggregate of rep1 as outer and hash_dist as the inner child without any motions
 -- because hashing cost of hash_dist is lower
@@ -4329,50 +4279,16 @@ explain (costs off) select *  from (select rep1.a from rep1 group by rep1.a) t1,
 select *  from (select rep1.a from rep1 group by rep1.a) t1, hash_dist t2 where t1.a = t2.b;
  a  | a  | b  
 ----+----+----
-  1 |  1 |  1
+ 10 | 10 | 10
+  6 |  6 |  6
+  9 |  9 |  9
+  5 |  5 |  5
   8 |  8 |  8
   4 |  4 |  4
   2 |  2 |  2
   7 |  7 |  7
   3 |  3 |  3
- 10 | 10 | 10
-  6 |  6 |  6
-  9 |  9 |  9
-  5 |  5 |  5
-(10 rows)
-
--- windowAgg on outer replicated child of InnerHashJoin
--- InnerHashJoin should select WindowAgg with rep1 as the outer child and hash_dist as the inner child without any motions
--- because hashing cost of hash_dist is lower
-explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.04 rows=100 width=16)
-   ->  Hash Join  (cost=0.00..862.04 rows=34 width=16)
-         Hash Cond: ((sum(rep1.a) OVER (?)) = (hash_dist.a)::bigint)
-         ->  WindowAgg  (cost=0.00..431.02 rows=100 width=8)
-               Partition By: rep1.a
-               ->  Sort  (cost=0.00..431.02 rows=100 width=4)
-                     Sort Key: rep1.a
-                     ->  Seq Scan on rep1  (cost=0.00..431.00 rows=100 width=4)
-         ->  Hash  (cost=431.00..431.00 rows=4 width=8)
-               ->  Seq Scan on hash_dist  (cost=0.00..431.00 rows=4 width=8)
- Optimizer: GPORCA
-(11 rows)
-
-select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
- sum | a  | b  
------+----+----
-   5 |  5 |  5
-   6 |  6 |  6
-   9 |  9 |  9
-  10 | 10 | 10
-   1 |  1 |  1
-   2 |  2 |  2
-   3 |  3 |  3
-   4 |  4 |  4
-   7 |  7 |  7
-   8 |  8 |  8
+  1 |  1 |  1
 (10 rows)
 
 -- Union all on outer child (two replicated tables) of InnerHashJoin
@@ -4462,6 +4378,41 @@ select count(*) from (select * from rep1 order by rep1.a) t1, hash_dist t2 where
     10
 (1 row)
 
+-- windowAgg on outer replicated child of InnerHashJoin
+-- InnerHashJoin should select WindowAgg with rep1 as the outer child and hash_dist as the inner child without any motions
+-- because hashing cost of hash_dist is lower
+explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Hash Join  (cost=0.00..862.05 rows=100 width=16)
+   Hash Cond: ((sum(rep1.a) OVER (?)) = (hash_dist.a)::bigint)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.03 rows=100 width=8)
+         ->  WindowAgg  (cost=0.00..431.02 rows=300 width=8)
+               Partition By: rep1.a
+               ->  Sort  (cost=0.00..431.02 rows=300 width=4)
+                     Sort Key: rep1.a
+                     ->  Seq Scan on rep1  (cost=0.00..431.00 rows=300 width=4)
+   ->  Hash  (cost=431.00..431.00 rows=10 width=8)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=10 width=8)
+               ->  Seq Scan on hash_dist  (cost=0.00..431.00 rows=4 width=8)
+ Optimizer: GPORCA
+(12 rows)
+
+select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
+ sum | a  | b  
+-----+----+----
+   1 |  1 |  1
+   5 |  5 |  5
+   6 |  6 |  6
+   9 |  9 |  9
+  10 | 10 | 10
+   2 |  2 |  2
+   3 |  3 |  3
+   4 |  4 |  4
+   7 |  7 |  7
+   8 |  8 |  8
+(10 rows)
+
 -- Limit on outer replicated child of InnerHashJoin
 -- InnerHashJoin should select limit on rep1 as the outer child and hash_dist as the inner child
 -- because hashing cost of hash_dist is lower
@@ -4486,8 +4437,62 @@ select count(*) from (select * from rep1 limit 10) t1, hash_dist t2 where t1.a =
     10
 (1 row)
 
-drop table rep1,rep2, rand, hash_dist;
 reset optimizer_enable_motion_redistribute;
+-- InnerHashJoin should select rep1 as the outer child and rep2 as the inner child without any motions
+-- because hashing cost of rep2 is lower
+explain (costs off) select * from rep1, rep2 where rep1.a = rep2.a;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rep1.a = rep2.a)
+         ->  Seq Scan on rep1
+         ->  Hash
+               ->  Result
+                     One-Time Filter: (gp_execution_segment() = 2)
+                     ->  Seq Scan on rep2
+ Optimizer: GPORCA
+(9 rows)
+
+select count(*) from rep1, rep2 where rep1.a = rep2.a;
+ count 
+-------
+    10
+(1 row)
+
+-- InnerHashJoin with the inner child being universal
+-- InnerHashJoin should select gather motion with rep1 as outer and universal as the inner child without any motions
+-- because hashing cost of universal is lower
+explain (costs off) select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rep1.a = generate_series.generate_series)
+         ->  Seq Scan on rep1
+         ->  Hash
+               ->  Result
+                     One-Time Filter: (gp_execution_segment() = 1)
+                     ->  Function Scan on generate_series
+ Optimizer: GPORCA
+(9 rows)
+
+select * from rep1, generate_series(1, 10) t1 where rep1.a = t1;
+ a  |  b  | t1 
+----+-----+----
+  1 | 0.1 |  1
+  2 | 0.2 |  2
+  3 | 0.3 |  3
+  4 | 0.4 |  4
+  5 | 0.5 |  5
+  6 | 0.6 |  6
+  7 | 0.7 |  7
+  8 | 0.8 |  8
+  9 | 0.9 |  9
+ 10 |   1 | 10
+(10 rows)
+
+drop table rep1,rep2, rand, hash_dist;
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

@@ -1989,18 +1989,24 @@ explain select a, sum(mc) from (select a, b, max(c) mc from t1_replicated group 
 (9 rows)
 
 explain SELECT t1.a, sum(c) from t1_replicated as t1 join t2_replicated as t2 on t1.a = t2.a group by t1.a;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..862.00 rows=1 width=12)
-   ->  HashAggregate  (cost=0.00..862.00 rows=3 width=12)
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=12)
+   ->  Finalize HashAggregate  (cost=0.00..862.00 rows=1 width=12)
          Group Key: t1_replicated.a
-         ->  Hash Join  (cost=0.00..862.00 rows=3 width=12)
-               Hash Cond: (t1_replicated.a = t2_replicated.a)
-               ->  Seq Scan on t1_replicated  (cost=0.00..431.00 rows=3 width=12)
-               ->  Hash  (cost=431.00..431.00 rows=3 width=4)
-                     ->  Seq Scan on t2_replicated  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=12)
+               Hash Key: t1_replicated.a
+               ->  Streaming Partial HashAggregate  (cost=0.00..862.00 rows=1 width=12)
+                     Group Key: t1_replicated.a
+                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=12)
+                           Hash Cond: (t1_replicated.a = t2_replicated.a)
+                           ->  Seq Scan on t1_replicated  (cost=0.00..431.00 rows=1 width=12)
+                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                       One-Time Filter: (gp_execution_segment() = 0)
+                                       ->  Seq Scan on t2_replicated  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: GPORCA
+(15 rows)
 
 explain select count(a) from t1_replicated where c < (select sum(b) from t2_replicated);
                                                        QUERY PLAN                                                       
