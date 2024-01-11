@@ -4345,20 +4345,21 @@ select *  from (select rep1.a from rep1 group by rep1.a) t1, hash_dist t2 where 
 -- InnerHashJoin should select WindowAgg with rep1 as the outer child and hash_dist as the inner child without any motions
 -- because hashing cost of hash_dist is lower
 explain select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.04 rows=100 width=16)
-   ->  Hash Join  (cost=0.00..862.04 rows=34 width=16)
-         Hash Cond: ((sum(rep1.a) OVER (?)) = (hash_dist.a)::bigint)
-         ->  WindowAgg  (cost=0.00..431.02 rows=100 width=8)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Hash Join  (cost=0.00..862.05 rows=100 width=16)
+   Hash Cond: ((sum(rep1.a) OVER (?)) = (hash_dist.a)::bigint)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.03 rows=100 width=8)
+         ->  WindowAgg  (cost=0.00..431.02 rows=300 width=8)
                Partition By: rep1.a
-               ->  Sort  (cost=0.00..431.02 rows=100 width=4)
+               ->  Sort  (cost=0.00..431.02 rows=300 width=4)
                      Sort Key: rep1.a
-                     ->  Seq Scan on rep1  (cost=0.00..431.00 rows=100 width=4)
-         ->  Hash  (cost=431.00..431.00 rows=4 width=8)
+                     ->  Seq Scan on rep1  (cost=0.00..431.00 rows=300 width=4)
+   ->  Hash  (cost=431.00..431.00 rows=10 width=8)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=10 width=8)
                ->  Seq Scan on hash_dist  (cost=0.00..431.00 rows=4 width=8)
  Optimizer: GPORCA
-(11 rows)
+(12 rows)
 
 select * from (select sum(rep1.a) OVER(partition by rep1.a) from rep1) t2, hash_dist where t2.sum=hash_dist.a;
  sum | a  | b  

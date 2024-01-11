@@ -77,9 +77,6 @@ public:
 	// does this distribution satisfy the given one
 	BOOL FSatisfies(const CDistributionSpec *pds) const override;
 
-	// does this distribution match the given one
-	BOOL Matches(const CDistributionSpec *pds) const override;
-
 	// append enforcers to dynamic array for the given plan properties
 	void AppendEnforcers(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						 CReqdPropPlan *prpp, CExpressionArray *pdrgpexpr,

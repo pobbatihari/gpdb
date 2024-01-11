@@ -149,14 +149,14 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 
 		// Restrict the InnerHashJoin alternative (broadcast,
 		// non-singleton) to cases where the outer child holds a
-		// replicated distribution. Otherwise, we risk generating
+		// strict replicated distribution. Otherwise, we risk generating
 		// suboptimal plans by broadcasting the outer child using a
 		// different optimization request. Therefore, we are
 		// prohibiting the enforcer under the following conditions:
 		// 1. If it is a broadcast outer request, indicated by the
 		// fAllowedEnforced = false flag (set to true for the broadcast
 		// inner request).
-		// 2. If the input distribution spec is not already replicated,
+		// 2. If the input distribution spec is not strict replicated,
 		// or if the input distribution is replicated due to an
 		// enforcer introduced by another request. An example of the
 		// latter is when a broadcast motion is applied to a
@@ -185,10 +185,9 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		// that of a replicated table.  However, as detailed by the
 		// reasoning above, broadcasting a distributed outer isn't
 		// permitted by this PR.
-		if (CDistributionSpec::EdtReplicated == m_pds->Edt() &&
+		if (CDistributionSpec::EdtStrictReplicated == m_pds->Edt() &&
 			!CDistributionSpecReplicated::PdsConvert(m_pds)->FAllowEnforced() &&
-			((CDistributionSpec::EdtStrictReplicated != pds->Edt() &&
-			  CDistributionSpec::EdtTaintedReplicated != pds->Edt()) ||
+			(CDistributionSpec::EdtStrictReplicated != pds->Edt() ||
 			 popPhysical->Eopid() == COperator::EopPhysicalMotionBroadcast))
 		{
 			return EpetProhibited;
