@@ -76,6 +76,11 @@ CXformLeftAntiSemiJoinNotIn2HashJoinNotIn::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
+	// TODO: - April 4th 2024, currenlty not handled for non-scalar subquery
+	if (CUtils::FScalarBoolOp((*pexpr)[2]))
+	{
+		return;
+	}
 	CXformUtils::ImplementHashJoin<CPhysicalLeftAntiSemiHashJoinNotIn>(
 		pxfctxt, pxfres, pexpr);
 
