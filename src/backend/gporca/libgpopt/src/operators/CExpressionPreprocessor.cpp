@@ -213,7 +213,10 @@ CExpressionPreprocessor::PexprSimplifyQuantifiedSubqueries(CMemoryPool *mp,
 	GPOS_ASSERT(nullptr != pexpr);
 
 	COperator *pop = pexpr->Pop();
+
+	// TODO: - April 4th 2024, currenlty not handled for non-scalar subquery
 	if (CUtils::FQuantifiedSubquery(pop) &&
+		!(CScalarSubqueryQuantified::PopConvert(pop)->IsNonScalarSubq()) &&
 		1 == (*pexpr)[0]->DeriveMaxCard().Ull())
 	{
 		CExpression *pexprInner = (*pexpr)[0];
@@ -2641,7 +2644,7 @@ CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
 }
 
-// converts IN subquery to a predicate AND an EXISTS subquery
+// converts IN/ANY subquery to a predicate AND an EXISTS subquery
 // Example Algebrized queries:
 // 1. Without a Project List:
 //		Input:
@@ -2678,6 +2681,32 @@ CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 //		|     +--CScalarConst (1)
 //		+--CScalarSubqueryExists
 //		   +--CLogicalGet "foo" ("foo"), Columns: ["c1" (8) ...] Key sets: {[1,7]}
+//
+// 3. non-scalar subquery with project list
+//		Input:
+//		+--CScalarSubqueryAny(=)["a" (18), "b" (19)]
+//			 |--CLogicalProject
+//			 |  |--CLogicalGet "bar" ("bar"), Columns: ["a" (9), "b" (10)" ...] Key sets: {[2,8]}
+//			 |  +--CScalarProjectList
+//			 |     |--CScalarProjectElement "a" (18)
+//			 |     |  +--CScalarIdent "a" (0)
+//			 |     +--CScalarProjectElement "b" (19)
+//			 |        +--CScalarIdent "b" (1)
+//			 +--CScalarValuesList
+//				|--CScalarIdent "a" (0)
+//				+--CScalarIdent "b" (1)
+//
+//			Output:
+//			+--CScalarBoolOp (EboolopAnd)
+//				|--CScalarCmp (=)
+//				|  |--CScalarIdent "a" (0)
+//				|  +--CScalarIdent "a" (0)
+//				|--CScalarCmp (=)
+//				|  |--CScalarIdent "b" (1)
+//				|  +--CScalarIdent "b" (1)
+//					  +--CScalarSubqueryExists
+//					  +--CLogicalGet "bar" ("bar"), Columns: ["a" (9), "b" (10) ...] Key sets: {[2,8]}
+
 CExpression *
 CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 												 CExpression *pexpr)
@@ -2704,45 +2733,136 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 		return nullptr;
 	}
 
-	// since Orca doesn't support IN subqueries of multiple columns such as
-	// (a,a) in (select foo.a, foo.a from ...) ,
-	// only extract the first expression under the first project element in the
-	// project list and make it as the right operand to the scalar operation.
+	CScalarSubqueryAny *subqAny = CScalarSubqueryAny::PopConvert(pop);
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
 	CExpression *pexprRight = nullptr;
 	CExpression *pexprSubqOfExists = nullptr;
+
+	// will be utilized to reference column references within the inner child of the subquery
+	CColRefArray *colref_array = nullptr;
+
+	CExpressionArray *pexprScalarChilds = GPOS_NEW(mp) CExpressionArray(mp);
+
 	if (COperator::EopLogicalProject == pexprRelational->Pop()->Eopid())
 	{
-		pexprRight = CUtils::PNthProjectElementExpr(pexprRelational, 0);
-		pexprRight->AddRef();
+		if (subqAny->IsNonScalarSubq())
+		{
+			IMdIdArray *mdids = subqAny->MdIdOps();
+			// Column references of the inner child of non-scalar subquery
+			colref_array = subqAny->Pcrs();
+
+			// project element list
+			CExpression *pexprPrjEl = (*pexprRelational)[1];
+			for (ULONG ulCol = 0; ulCol < colref_array->Size(); ulCol++)
+			{
+				IMDId *mdid = (*mdids)[ulCol];
+
+				// Create a scalar operations by extracting the
+				// expression under each project element in the
+				// project list, setting it as the right
+				// operand, and using the subquery outer child
+				// as the left operand
+				for (ULONG ul = 0; ul < pexprPrjEl->Arity(); ul++)
+				{
+					// project element
+					CExpression *pexprPrjE = (*pexprPrjEl)[ul];
+					CScalarProjectElement *popScPrjElem =
+						CScalarProjectElement::PopConvert(pexprPrjE->Pop());
+					CColRef *pcrPrjElem = popScPrjElem->Pcr();
+					if (pcrPrjElem == (*colref_array)[ulCol])
+					{
+						// scalar ident
+						pexprRight = (*(*pexprPrjEl)[ul])[0];
+						CExpression *pexprLeftChild = (*pexprLeft)[ulCol];
+						pexprRight->AddRef();
+						pexprLeftChild->AddRef();
+						CExpression *scalarop = CUtils::PexprScalarCmp(
+							mp, pexprLeftChild, pexprRight,
+							CUtils::ParseCmpType(mdid));
+						pexprScalarChilds->Append(scalarop);
+					}
+				}
+			}
+		}
+		else
+		{
+			IMDId *mdid = subqAny->MdIdOp();
+			const CWStringConst *str =
+				md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
+			// Create a scalar operation by taking the first
+			// expression from the first project element in the
+			// project list and assigning it as the right operand,
+			// with the subquery's outer child as the left operand.
+			pexprRight = CUtils::PNthProjectElementExpr(pexprRelational, 0);
+			pexprRight->AddRef();
+			mdid->AddRef();
+			pexprLeft->AddRef();
+			CExpression *scalarop =
+				CUtils::PexprScalarCmp(mp, pexprLeft, pexprRight, *str, mdid);
+			pexprScalarChilds->Append(scalarop);
+		}
 		pexprSubqOfExists = (*pexprRelational)[0];
 	}
 	else
 	{
-		pexprRight = CUtils::PexprScalarIdent(
-			mp, CScalarSubqueryAny::PopConvert(pop)->Pcr());
+		IMdIdArray *mdids = subqAny->MdIdOps();
+
+		if (subqAny->IsNonScalarSubq())
+		{
+			// Column references of the inner child of non-scalar subquery
+			colref_array = subqAny->Pcrs();
+
+			// create scalar comparisons using columns references of inner
+			// child and outer child of the non-scalar subquery
+			for (ULONG ulCol = 0; ulCol < pexprLeft->Arity(); ulCol++)
+			{
+				IMDId *mdid = (*mdids)[ulCol];
+				CExpression *pexprLeftChild = (*pexprLeft)[ulCol];
+				pexprLeftChild->AddRef();
+				CExpression *scalarop = CUtils::PexprScalarCmp(
+					mp, pexprLeftChild,
+					CUtils::PexprScalarIdent(mp, (*colref_array)[ulCol]),
+					CUtils::ParseCmpType(mdid));
+				pexprScalarChilds->Append(scalarop);
+			}
+		}
+		else
+		{
+			IMDId *mdid = subqAny->MdIdOp();
+			const CWStringConst *str =
+				md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
+			pexprLeft->AddRef();
+			mdid->AddRef();
+			CExpression *scalarop = CUtils::PexprScalarCmp(
+				mp, pexprLeft, CUtils::PexprScalarIdent(mp, subqAny->Pcr()),
+				*str, mdid);
+			pexprScalarChilds->Append(scalarop);
+		}
 		pexprSubqOfExists = pexprRelational;
 	}
 
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	IMDId *mdid = CScalarSubqueryAny::PopConvert(pop)->MdIdOp();
-	const CWStringConst *str =
-		md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
-
-	mdid->AddRef();
-	pexprLeft->AddRef();
-	CExpression *pexprScalarOp =
-		CUtils::PexprScalarCmp(mp, pexprLeft, pexprRight, *str, mdid);
+	// AND the generated predicates with the EXISTS subquery expression and
+	// return.
+	CExpressionArray *pdrgpexprBoolOperands = GPOS_NEW(mp) CExpressionArray(mp);
 
 	pexprSubqOfExists->AddRef();
 	CExpression *pexprScalarSubqExists = GPOS_NEW(mp) CExpression(
 		mp, GPOS_NEW(mp) CScalarSubqueryExists(mp), pexprSubqOfExists);
 
-	// AND the generated predicate with the EXISTS subquery expression and return.
-	CExpressionArray *pdrgpexprBoolOperands = GPOS_NEW(mp) CExpressionArray(mp);
-
-	pdrgpexprBoolOperands->Append(pexprScalarOp);
-	pdrgpexprBoolOperands->Append(pexprScalarSubqExists);
-
+	if (pexprScalarChilds->Size() > 1)
+	{
+		pdrgpexprBoolOperands->Append(CUtils::PexprScalarBoolOp(
+			mp, subqAny->GetBoolOptype(), pexprScalarChilds));
+		pdrgpexprBoolOperands->Append(pexprScalarSubqExists);
+	}
+	else
+	{
+		(*pexprScalarChilds)[0]->AddRef();
+		pdrgpexprBoolOperands->Append((*pexprScalarChilds)[0]);
+		pexprScalarChilds->Release();
+		pdrgpexprBoolOperands->Append(pexprScalarSubqExists);
+	}
 	return CUtils::PexprScalarBoolOp(mp, CScalarBoolOp::EboolopAnd,
 									 pdrgpexprBoolOperands);
 }
@@ -2779,36 +2899,71 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 	//Check if the inner is a SubqueryAny
 	if (CUtils::FAnySubquery(pop))
 	{
-		CExpression *pexprLogicalProject = (*pexprNew)[0];
+		CScalarSubqueryAny *subqAny = CScalarSubqueryAny::PopConvert(pop);
+		CExpression *pexprLogicalChild = (*pexprNew)[0];
 		// we do the conversion if the project list has an outer reference and
 		// it does not include any column from the relational child.
-		if (COperator::EopLogicalProject == pexprLogicalProject->Pop()->Eopid())
+		if (COperator::EopLogicalProject == pexprLogicalChild->Pop()->Eopid())
 		{
 			// bail out if subquery has an inner reference or
 			// does not have any outer reference
-			if (!CUtils::HasOuterRefs(pexprLogicalProject) ||
-				CUtils::FInnerRefInProjectList(pexprLogicalProject))
+			if (!CUtils::HasOuterRefs(pexprLogicalChild) ||
+				CUtils::FInnerRefInProjectList(pexprLogicalChild))
 			{
 				return pexprNew;
 			}
 			// also bail out if the project list returns set
-			CExpression *pexprProjectList = (*pexprLogicalProject)[1];
+			CExpression *pexprProjectList = (*pexprLogicalChild)[1];
 			if (pexprProjectList->DeriveSetReturningFunctionColumns()->Size() >
 				0)
 			{
 				return pexprNew;
 			}
+
+			if (subqAny->IsNonScalarSubq())
+			{
+				CColRefArray *pcrsSubquery =
+					CScalarSubqueryAny::PopConvert(pop)->Pcrs();
+				CColRefSet *pcrsRelationalChild =
+					(*pexprLogicalChild)[0]->DeriveOutputColumns();
+
+				// bail out if the project list contains inner reference
+				for (ULONG ulCol = 0; ulCol < pcrsSubquery->Size(); ulCol++)
+				{
+					if (pcrsRelationalChild->FMember((*pcrsSubquery)[ulCol]))
+					{
+						return pexprNew;
+					}
+				}
+			}
 		}
 		else
 		{
-			// perform conversion if subquery does not output any of the columns from relational child
-			const CColRef *pcrSubquery =
-				CScalarSubqueryAny::PopConvert(pop)->Pcr();
+			// perform conversion if subquery does not output any
+			// of the columns from relational child
 			CColRefSet *pcrsRelationalChild =
-				(*pexpr)[0]->DeriveOutputColumns();
-			if (pcrsRelationalChild->FMember(pcrSubquery))
+				pexprLogicalChild->DeriveOutputColumns();
+			if (subqAny->IsNonScalarSubq())
 			{
-				return pexprNew;
+				CColRefArray *pcrsSubquery =
+					CScalarSubqueryAny::PopConvert(pop)->Pcrs();
+				CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, pcrsSubquery);
+				if (pcrsRelationalChild->ContainsAll(pcrs))
+				{
+					pcrs->Release();
+					return pexprNew;
+				}
+				pcrs->Release();
+			}
+			else
+			{
+				const CColRef *pcrSubquery =
+					CScalarSubqueryAny::PopConvert(pop)->Pcr();
+
+				if (pcrsRelationalChild->FMember(pcrSubquery))
+				{
+					return pexprNew;
+				}
 			}
 		}
 

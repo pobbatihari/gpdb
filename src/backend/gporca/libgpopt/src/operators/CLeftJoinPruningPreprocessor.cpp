@@ -381,6 +381,14 @@ CLeftJoinPruningPreprocessor::PexprJoinPruningScalarSubquery(
 	{
 		CScalarSubqueryQuantified *subquery_pop =
 			CScalarSubqueryQuantified::PopConvert(pexprScalar->Pop());
+		// TODO: - April 4th 2024, currenlty not handled for non-scalar subquery
+		if (subquery_pop->IsNonScalarSubq())
+		{
+			pexprScalar->AddRef();
+			pdrgpexpr->Release();
+			subquery_colrefset->Release();
+			return pexprScalar;
+		}
 		subquery_colref = subquery_pop->Pcr();
 	}
 
