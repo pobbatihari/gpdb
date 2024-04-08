@@ -781,6 +781,12 @@ CXformUtils::QuantifiedToAgg(
 	GPOS_ASSERT(nullptr != ppexprNewSubquery);
 	GPOS_ASSERT(nullptr != ppexprNewScalar);
 
+	// TODO: - April 4th 2024, currenlty not handled for non-scalar subquery
+	if (CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop())
+			->IsNonScalarSubq())
+	{
+		return;
+	}
 	if (COperator::EopScalarSubqueryAll == pexprSubquery->Pop()->Eopid())
 	{
 		return SubqueryAllToAgg(mp, pexprSubquery, ppexprNewSubquery,
@@ -1230,21 +1236,52 @@ CXformUtils::PexprInversePred(CMemoryPool *mp, CExpression *pexprSubquery)
 	CScalarSubqueryAll *popSqAll =
 		CScalarSubqueryAll::PopConvert(pexprSubquery->Pop());
 	CExpression *pexprScalar = (*pexprSubquery)[1];
-	const CColRef *colref = popSqAll->Pcr();
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-	// get mdid and name of the inverse of the comparison operator used by subquery
+	if (popSqAll->IsNonScalarSubq())
+	{
+		IMdIdArray *mdids = popSqAll->MdIdOps();
+
+		CColRefArray *colrefs = popSqAll->Pcrs();
+		const CWStringConst *pstrop = popSqAll->PstrOp();
+
+		// Traverse the scalarValueList (pexprNewScalar) and produce scalar
+		// comparisons between each scalar child and the ordered colrefs from
+		// colrefArray using the list of MDIDs<Inverseop>
+		CExpressionArray *pscalarchilds = GPOS_NEW(mp) CExpressionArray(mp);
+		for (ULONG ulCol = 0; ulCol < pexprScalar->Arity(); ulCol++)
+		{
+			IMDId *mdid_op = (*mdids)[ulCol];
+			IMDId *pmdidInverseOp =
+				md_accessor->RetrieveScOp(mdid_op)->GetInverseOpMdid();
+
+			CExpression *pexprLeft = (*pexprScalar)[ulCol];
+			pexprLeft->AddRef();
+
+			CExpression *scalarcmp =
+				CUtils::PexprScalarCmp(mp, pexprLeft, (*colrefs)[ulCol],
+									   CUtils::ParseCmpType(pmdidInverseOp));
+			pscalarchilds->Append(scalarcmp);
+		}
+
+		const CWStringConst str_eq(GPOS_WSZ_LIT("="));
+		if (pstrop->Equals(&str_eq))
+		{
+			return CUtils::PexprScalarBoolOp(mp, CScalarBoolOp::EboolopOr,
+											 pscalarchilds);
+		}
+		return CUtils::PexprScalarBoolOp(mp, CScalarBoolOp::EboolopAnd,
+										 pscalarchilds);
+	}
+
 	IMDId *mdid_op = popSqAll->MdIdOp();
 	IMDId *pmdidInverseOp =
 		md_accessor->RetrieveScOp(mdid_op)->GetInverseOpMdid();
 	const CWStringConst *pstrFirst =
 		md_accessor->RetrieveScOp(pmdidInverseOp)->Mdname().GetMDName();
-
-	// generate a predicate for the inversion of the comparison involved in the subquery
 	pexprScalar->AddRef();
 	pmdidInverseOp->AddRef();
-
-	return CUtils::PexprScalarCmp(mp, pexprScalar, colref, *pstrFirst,
+	return CUtils::PexprScalarCmp(mp, pexprScalar, popSqAll->Pcr(), *pstrFirst,
 								  pmdidInverseOp);
 }
 

@@ -82,6 +82,10 @@ CXformSimplifySubquery::FSimplifyQuantified(CMemoryPool *mp,
 	CExpression *pexprCmp = nullptr;
 	CXformUtils::QuantifiedToAgg(mp, pexprScalar, &pexprNewSubquery, &pexprCmp);
 
+	if (nullptr == pexprCmp && nullptr == pexprNewSubquery)
+	{
+		return false;
+	}
 	// create a comparison predicate involving subquery expression
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 	(*pexprCmp)[1]->AddRef();
