@@ -1864,7 +1864,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select A.i, B.i from A, B where (A.i,A.j) = all(select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  i  | i  
 ----+----
  19 | -1
@@ -1911,8 +1911,6 @@ select A.i, B.i from A, B where not exists (select B.i,B.j from B where B.i = A.
 (18 rows)
 
 select A.i, B.i from A, B where (A.i,A.j) in (select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i | i  
 ---+----
  1 | -1
@@ -1930,8 +1928,6 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 (12 rows)
 
 select A.i, B.i,C.i from A, B, C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i | i | i 
 ---+---+---
  1 | 1 | 1
@@ -2186,8 +2182,6 @@ select A.i, B.i,C.i from A, B, C where not exists (select A.i, B.i from A,B wher
 (240 rows)
 
 select A.i, B.i,C.i from A, B, C where (A.i,B.i) in (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i | i | i 
 ---+---+---
  1 | 1 | 1
@@ -2198,7 +2192,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from A,B,C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < C.i and B.i = C.i and C.i not in (select A.i from A where A.j = 1 and A.j = B.j)) order by 1,2,3,4,5,6;
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  i  | j | i  | j | i  | j  
 ----+---+----+---+----+----
   1 | 1 |  2 | 7 |  2 |  7
@@ -2342,8 +2336,6 @@ SELECT id, first_name FROM employee WHERE id IN
 SELECT id, first_name, salary from employee
     where (id, salary) IN
         (SELECT id, MIN(salary) FROM employee GROUP BY id) order by id;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  id | first_name | salary  
 ----+------------+---------
  01 | Jason      | 1234.56
