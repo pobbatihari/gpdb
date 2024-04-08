@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CColRefSet.h"
+#include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
@@ -47,6 +48,32 @@ CScalarSubqueryQuantified::CScalarSubqueryQuantified(
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CScalarSubqueryQuantified::CScalarSubqueryQuantified
+//
+//	@doc:
+//		Ctor
+//
+//---------------------------------------------------------------------------
+CScalarSubqueryQuantified::CScalarSubqueryQuantified(
+	CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
+	const CWStringConst *pstrScalarOp, CColRefArray *colref_array,
+	CScalarBoolOp::EBoolOperator testexpr_booloptype)
+	: CScalar(mp),
+	  m_scalar_op_mdids(scalar_op_mdids),
+	  m_pstrScalarOp(pstrScalarOp),
+	  m_colref_array(colref_array),
+	  m_testexprBoolopType(testexpr_booloptype)
+
+{
+	m_isNonscalarSubq = true;
+	m_scalar_op_mdid = (*scalar_op_mdids)[0];
+	GPOS_ASSERT(nullptr != scalar_op_mdids);
+	GPOS_ASSERT(nullptr != pstrScalarOp);
+	GPOS_ASSERT(nullptr != colref_array);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CScalarSubqueryQuantified::~CScalarSubqueryQuantified
 //
 //	@doc:
@@ -55,8 +82,16 @@ CScalarSubqueryQuantified::CScalarSubqueryQuantified(
 //---------------------------------------------------------------------------
 CScalarSubqueryQuantified::~CScalarSubqueryQuantified()
 {
-	m_scalar_op_mdid->Release();
 	GPOS_DELETE(m_pstrScalarOp);
+	if (IsNonScalarSubq())
+	{
+		m_scalar_op_mdids->Release();
+		m_colref_array->Release();
+	}
+	else
+	{
+		m_scalar_op_mdid->Release();
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -121,8 +156,11 @@ CScalarSubqueryQuantified::HashValue() const
 {
 	return gpos::CombineHashes(
 		COperator::HashValue(),
-		gpos::CombineHashes(m_scalar_op_mdid->HashValue(),
-							gpos::HashPtr<CColRef>(m_pcr)));
+		IsNonScalarSubq()
+			? gpos::CombineHashes(gpos::HashPtr<IMdIdArray>(m_scalar_op_mdids),
+								  gpos::HashPtr<CColRefArray>(m_colref_array))
+			: gpos::CombineHashes(m_scalar_op_mdid->HashValue(),
+								  gpos::HashPtr<CColRef>(m_pcr)));
 }
 
 
@@ -145,7 +183,11 @@ CScalarSubqueryQuantified::Matches(COperator *pop) const
 	// match if contents are identical
 	CScalarSubqueryQuantified *popSsq =
 		CScalarSubqueryQuantified::PopConvert(pop);
-	return popSsq->Pcr() == m_pcr && popSsq->MdIdOp()->Equals(m_scalar_op_mdid);
+
+	return IsNonScalarSubq() ? popSsq->Pcrs()->Equals(m_colref_array) &&
+								   popSsq->MdIdOps()->Equals(m_scalar_op_mdids)
+							 : popSsq->Pcr() == m_pcr &&
+								   popSsq->MdIdOp()->Equals(m_scalar_op_mdid);
 }
 
 
@@ -165,12 +207,29 @@ CScalarSubqueryQuantified::PcrsUsed(CMemoryPool *mp, CExpressionHandle &exprhdl)
 
 	CColRefSet *pcrsChildOutput =
 		exprhdl.DeriveOutputColumns(0 /* child_index */);
-	if (!pcrsChildOutput->FMember(m_pcr))
-	{
-		// subquery column is not produced by relational child, add it to used columns
-		pcrs->Include(m_pcr);
-	}
 
+	if (IsNonScalarSubq())
+	{
+		CColRefArray *colref_array = Pcrs();
+		for (ULONG ulCol = 0; ulCol < colref_array->Size(); ulCol++)
+		{
+			if (!pcrsChildOutput->FMember((*colref_array)[ulCol]))
+			{
+				// subquery column is not produced by
+				// relational child, add it to used columns
+				pcrs->Include((*colref_array)[ulCol]);
+			}
+		}
+	}
+	else
+	{
+		if (!pcrsChildOutput->FMember(m_pcr))
+		{
+			// subquery column is not produced by relational child,
+			// add it to used columns
+			pcrs->Include(m_pcr);
+		}
+	}
 	return pcrs;
 }
 
@@ -208,7 +267,21 @@ CScalarSubqueryQuantified::OsPrint(IOstream &os) const
 	os << SzId();
 	os << "(" << PstrOp()->GetBuffer() << ")";
 	os << "[";
-	m_pcr->OsPrint(os);
+	if (IsNonScalarSubq())
+	{
+		for (ULONG col = 0; col < m_colref_array->Size(); col++)
+		{
+			((*m_colref_array)[col])->OsPrint(os);
+			if (col < m_colref_array->Size() - 1)
+			{
+				os << ", ";
+			}
+		}
+	}
+	else
+	{
+		m_pcr->OsPrint(os);
+	}
 	os << "]";
 
 	return os;

@@ -39,6 +39,12 @@ public:
 					   const CWStringConst *pstrScalarOp,
 					   const CColRef *colref);
 
+	// ctor for non-scalar subquery (BOOLEXPR)
+	CScalarSubqueryAll(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
+					   const CWStringConst *pstrScalarOp,
+					   CColRefArray *colref_array,
+					   CScalarBoolOp::EBoolOperator testexpr_booloptype);
+
 	// dtor
 	~CScalarSubqueryAll() override = default;
 

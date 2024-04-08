@@ -34,6 +34,23 @@ CScalarSubqueryAll::CScalarSubqueryAll(CMemoryPool *mp, IMDId *scalar_op_mdid,
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CScalarSubqueryAll::CScalarSubqueryAll
+//
+//	@doc:
+//		Ctor
+//
+//---------------------------------------------------------------------------
+CScalarSubqueryAll::CScalarSubqueryAll(
+	CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
+	const CWStringConst *pstrScalarOp, CColRefArray *colref_array,
+	CScalarBoolOp::EBoolOperator testexpr_booloptype)
+	: CScalarSubqueryQuantified(mp, scalar_op_mdids, pstrScalarOp, colref_array,
+								testexpr_booloptype)
+{
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CScalarSubqueryAll::PopCopyWithRemappedColumns
 //
 //	@doc:
@@ -45,14 +62,20 @@ CScalarSubqueryAll::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											   UlongToColRefMap *colref_mapping,
 											   BOOL must_exist)
 {
-	CColRef *colref = CUtils::PcrRemap(Pcr(), colref_mapping, must_exist);
-
-	IMDId *scalar_op_mdid = MdIdOp();
-	scalar_op_mdid->AddRef();
-
 	CWStringConst *pstrScalarOp =
 		GPOS_NEW(mp) CWStringConst(mp, PstrOp()->GetBuffer());
 
+	if (IsNonScalarSubq())
+	{
+		IMdIdArray *mdids = MdIdOps();
+		CColRefArray *colref_array =
+			CUtils::PdrgpcrRemap(mp, Pcrs(), colref_mapping, must_exist);
+		return GPOS_NEW(mp) CScalarSubqueryAll(mp, mdids, pstrScalarOp,
+											   colref_array, GetBoolOptype());
+	}
+	IMDId *scalar_op_mdid = MdIdOp();
+	scalar_op_mdid->AddRef();
+	CColRef *colref = CUtils::PcrRemap(Pcr(), colref_mapping, must_exist);
 	return GPOS_NEW(mp)
 		CScalarSubqueryAll(mp, scalar_op_mdid, pstrScalarOp, colref);
 }

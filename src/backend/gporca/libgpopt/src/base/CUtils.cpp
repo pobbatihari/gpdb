@@ -4562,7 +4562,6 @@ CUtils::FInnerRefInProjectList(CExpression *pexpr)
 
 	// Project List with one project element
 	CExpression *pexprInner = (*pexpr)[1];
-	GPOS_ASSERT(1 == pexprInner->Arity());
 	BOOL fExprHasAnyCrFromCrs =
 		CUtils::FExprHasAnyCrFromCrs(pexprInner, pcrsOuterOutput);
 

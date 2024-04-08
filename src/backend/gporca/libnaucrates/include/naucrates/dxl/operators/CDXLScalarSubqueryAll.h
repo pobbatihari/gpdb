@@ -17,6 +17,7 @@
 #include "gpos/base.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarSubqueryQuantified.h"
 #include "naucrates/md/CMDName.h"
 #include "naucrates/md/IMDId.h"
@@ -42,6 +43,11 @@ public:
 	// ctor
 	CDXLScalarSubqueryAll(CMemoryPool *mp, IMDId *scalar_op_mdid,
 						  CMDName *mdname, ULONG colid);
+
+	// ctor for Non-SCalar subquery (BOOLEXPR)
+	CDXLScalarSubqueryAll(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
+						  CMDName *mdname, ULongPtrArray *colids,
+						  EdxlBoolExprType testexpr_booloptype);
 
 	// ident accessors
 	Edxlopid GetDXLOperator() const override;
