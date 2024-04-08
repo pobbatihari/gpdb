@@ -308,19 +308,20 @@ alter table tenk2 set (parallel_workers = 0);
 explain (costs off)
 	select count(*) from tenk1 where (two, four) not in
 	(select hundred, thousand from tenk2 where thousand > 100);
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Aggregate
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Nested Loop Left Anti Semi (Not-In) Join
-               Join Filter: ((tenk1.two = tenk2.hundred) AND (tenk1.four = tenk2.thousand))
-               ->  Seq Scan on tenk1
-               ->  Materialize
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                           ->  Seq Scan on tenk2
-                                 Filter: (thousand > 100)
- Optimizer: Postgres query optimizer
-(10 rows)
+         ->  Partial Aggregate
+               ->  Nested Loop Left Anti Semi (Not-In) Join
+                     Join Filter: ((tenk1.two = tenk2.hundred) AND (tenk1.four = tenk2.thousand))
+                     ->  Seq Scan on tenk1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                 ->  Seq Scan on tenk2
+                                       Filter: (thousand > 100)
+ Optimizer: GPORCA
+(11 rows)
 
 select count(*) from tenk1 where (two, four) not in
 	(select hundred, thousand from tenk2 where thousand > 100);
@@ -342,7 +343,7 @@ explain (costs off)
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on tenk2
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (8 rows)
 
 alter table tenk2 reset (parallel_workers);
@@ -1046,29 +1047,40 @@ explain (costs off, verbose)
                                                                                                QUERY PLAN                                                                                                
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Finalize Aggregate
-   Output: count(*)
+   Output: count()
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: (PARTIAL count(*))
+         Output: (PARTIAL count())
          ->  Partial Aggregate
-               Output: PARTIAL count(*)
-               ->  Hash Semi Join
-                     Hash Cond: ((a.unique1 = b.unique1) AND (a.two = (row_number() OVER (?))))
-                     ->  Seq Scan on public.tenk1 a
-                           Output: a.unique1, a.unique2, a.two, a.four, a.ten, a.twenty, a.hundred, a.thousand, a.twothousand, a.fivethous, a.tenthous, a.odd, a.even, a.stringu1, a.stringu2, a.string4
-                     ->  Hash
+               Output: PARTIAL count()
+               ->  Hash Join
+                     Hash Cond: ((b.unique1 = a.unique1) AND ((row_number() OVER (?)) = (a.two)::bigint))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Output: b.unique1, (row_number() OVER (?))
-                           ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                           Hash Key: b.unique1
+                           ->  HashAggregate
                                  Output: b.unique1, (row_number() OVER (?))
-                                 Hash Key: b.unique1
-                                 ->  WindowAgg
-                                       Output: b.unique1, row_number() OVER (?)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)
-                                             Output: b.unique1
-                                             ->  Seq Scan on public.tenk1 b
-                                                   Output: b.unique1
- Optimizer: Postgres query optimizer
- Settings: min_parallel_table_scan_size=0, parallel_setup_cost=0, parallel_tuple_cost=0
-(23 rows)
+                                 Group Key: b.unique1, (row_number() OVER (?))
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Output: b.unique1, (row_number() OVER (?))
+                                       Hash Key: b.unique1, (row_number() OVER (?))
+                                       ->  Streaming HashAggregate
+                                             Output: b.unique1, (row_number() OVER (?))
+                                             Group Key: b.unique1, (row_number() OVER (?))
+                                             ->  Redistribute Motion 1:3  (slice4)
+                                                   Output: b.unique1, (row_number() OVER (?))
+                                                   ->  WindowAgg
+                                                         Output: b.unique1, row_number() OVER (?)
+                                                         ->  Gather Motion 3:1  (slice5; segments: 3)
+                                                               Output: b.unique1
+                                                               ->  Seq Scan on public.tenk1 b
+                                                                     Output: b.unique1
+                     ->  Hash
+                           Output: a.unique1, a.two
+                           ->  Seq Scan on public.tenk1 a
+                                 Output: a.unique1, a.two
+ Optimizer: GPORCA
+ Settings: min_parallel_table_scan_size = '0', parallel_setup_cost = '0', parallel_tuple_cost = '0'
+(34 rows)
 
 -- LIMIT/OFFSET within sub-selects can't be pushed to workers.
 explain (costs off)
