@@ -172,6 +172,13 @@ public:
 		return 0;
 	}
 
+	// overloaded equality operator
+	BOOL
+	operator==(const IMDId &md) const
+	{
+		return Equals(&md);
+	}
+
 	// is the mdid valid
 	virtual BOOL IsValid() const = 0;
 

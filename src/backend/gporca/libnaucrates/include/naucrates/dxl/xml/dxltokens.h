@@ -216,6 +216,8 @@ enum Edxltoken
 	EdxltokenScalarSubqueryAny,
 	EdxltokenScalarSubqueryExists,
 	EdxltokenScalarSubqueryNotExists,
+	EdxltokenIsNonScalarSubquery,
+	EdxltokenSubqueryTestExprBoolOpType,
 
 	EdxltokenScalarDMLAction,
 	EdxltokenScalarOpList,
@@ -358,6 +360,7 @@ enum Edxltoken
 	EdxltokenColName,
 	EdxltokenTagColType,
 	EdxltokenColId,
+	EdxltokenColIds,
 	EdxltokenAttno,
 	EdxltokenColDropped,
 	EdxltokenColWidth,
@@ -401,6 +404,7 @@ enum Edxltoken
 	EdxltokenSelectorIds,
 
 	EdxltokenOpNo,
+	EdxltokenOpNos,
 	EdxltokenOpName,
 
 	EdxltokenOpType,

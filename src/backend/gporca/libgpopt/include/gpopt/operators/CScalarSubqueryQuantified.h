@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/operators/CScalar.h"
+#include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/xforms/CSubqueryHandler.h"
 
 namespace gpopt
@@ -45,17 +46,36 @@ private:
 	// id of comparison operator
 	IMDId *m_scalar_op_mdid;
 
+	// mdids of comparison operators
+	IMdIdArray *m_scalar_op_mdids;
+
 	// name of comparison operator
 	const CWStringConst *m_pstrScalarOp;
 
 	// column reference used in comparison
 	const CColRef *m_pcr;
 
+	// column references used in comparison
+	CColRefArray *m_colref_array;
+
+	// is subquery non-scalar
+	BOOL m_isNonscalarSubq = false;
+
+	// non-scalary subquery testexpr boolop type
+	CScalarBoolOp::EBoolOperator m_testexprBoolopType =
+		CScalarBoolOp::EboolopSentinel;
+
 protected:
 	// ctor
 	CScalarSubqueryQuantified(CMemoryPool *mp, IMDId *scalar_op_mdid,
 							  const CWStringConst *pstrScalarOp,
 							  const CColRef *colref);
+
+	// ctor of non-scalar subquery (BOOLEXPR)
+	CScalarSubqueryQuantified(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
+							  const CWStringConst *pstrScalarOp,
+							  CColRefArray *colref_array,
+							  CScalarBoolOp::EBoolOperator testexpr_booloptype);
 
 	// dtor
 	~CScalarSubqueryQuantified() override;
@@ -74,6 +94,34 @@ public:
 	Pcr() const
 	{
 		return m_pcr;
+	}
+
+	// column reference accessor
+	CColRefArray *
+	Pcrs()
+	{
+		return m_colref_array;
+	}
+
+	// is subquery non-scalar
+	BOOL
+	IsNonScalarSubq() const
+	{
+		return m_isNonscalarSubq;
+	}
+
+	// get non-scalar subquery testexpr boolop type
+	CScalarBoolOp::EBoolOperator
+	GetBoolOptype() const
+	{
+		return m_testexprBoolopType;
+	}
+
+	// array of mdid operators
+	IMdIdArray *
+	MdIdOps() const
+	{
+		return m_scalar_op_mdids;
 	}
 
 	// return the type of the scalar expression

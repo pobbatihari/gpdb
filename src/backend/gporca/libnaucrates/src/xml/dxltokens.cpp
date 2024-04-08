@@ -175,6 +175,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenScalar, GPOS_WSZ_LIT("Scalar")},
 		{EdxltokenScalarExpr, GPOS_WSZ_LIT("ScalarExpr")},
+		{EdxltokenSubqueryTestExprBoolOpType,
+		 GPOS_WSZ_LIT("SubqueryTestExprBoolOpType")},
 
 		{EdxltokenScalarProjList, GPOS_WSZ_LIT("ProjList")},
 		{EdxltokenScalarFilter, GPOS_WSZ_LIT("Filter")},
@@ -254,6 +256,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenScalarSubqueryAll, GPOS_WSZ_LIT("SubqueryAll")},
 		{EdxltokenScalarSubqueryExists, GPOS_WSZ_LIT("SubqueryExists")},
 		{EdxltokenScalarSubqueryNotExists, GPOS_WSZ_LIT("SubqueryNotExists")},
+		{EdxltokenIsNonScalarSubquery, GPOS_WSZ_LIT("IsNonScalarSubquery")},
 
 		{EdxltokenScalarDMLAction, GPOS_WSZ_LIT("DMLAction")},
 		{EdxltokenScalarOpList, GPOS_WSZ_LIT("ScalarOpList")},
@@ -404,6 +407,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenColName, GPOS_WSZ_LIT("ColName")},
 		{EdxltokenTagColType, GPOS_WSZ_LIT("ColType")},
 		{EdxltokenColId, GPOS_WSZ_LIT("ColId")},
+		{EdxltokenColIds, GPOS_WSZ_LIT("ColIds")},
 		{EdxltokenAttno, GPOS_WSZ_LIT("Attno")},
 		{EdxltokenColDropped, GPOS_WSZ_LIT("IsDropped")},
 		{EdxltokenColWidth, GPOS_WSZ_LIT("ColWidth")},
@@ -446,6 +450,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenSelectorIds, GPOS_WSZ_LIT("SelectorIds")},
 
 		{EdxltokenOpNo, GPOS_WSZ_LIT("OperatorMdid")},
+		{EdxltokenOpNos, GPOS_WSZ_LIT("OperatorMdids")},
 		{EdxltokenOpName, GPOS_WSZ_LIT("OperatorName")},
 		{EdxltokenOpType, GPOS_WSZ_LIT("OperatorType")},
 		{EdxltokenOpTypeAny, GPOS_WSZ_LIT("Any")},

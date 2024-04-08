@@ -111,6 +111,13 @@ private:
 		Edxlopid edxlopid, IMDId *scalar_op_mdid, const CWStringConst *str,
 		ULONG colid, CDXLNode *pdxlnLogicalChild, CDXLNode *pdxlnScalarChild);
 
+	// helper for creating quantified non-scalar subquery
+	CExpression *PexprScalarSubqueryQuantified(
+		Edxlopid edxlopid, IMdIdArray *scalar_op_mdids,
+		const CWStringConst *str, ULongPtrArray *colids,
+		CScalarBoolOp::EBoolOperator testexpr_booloptype,
+		CDXLNode *pdxlnLogicalChild, CDXLNode *pdxlnScalarChild);
+
 	// translate a logical DXL operator into an optimizer expression
 	CExpression *PexprLogical(const CDXLNode *dxlnode);
 

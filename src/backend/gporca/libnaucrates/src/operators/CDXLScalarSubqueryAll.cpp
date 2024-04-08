@@ -39,6 +39,22 @@ CDXLScalarSubqueryAll::CDXLScalarSubqueryAll(CMemoryPool *mp,
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CDXLScalarSubqueryAll::CDXLScalarSubqueryAll
+//
+//	@doc:
+//		Constructor
+//
+//---------------------------------------------------------------------------
+CDXLScalarSubqueryAll::CDXLScalarSubqueryAll(
+	CMemoryPool *mp, IMdIdArray *scalar_op_mdids, CMDName *scalar_op_mdname,
+	ULongPtrArray *colids, EdxlBoolExprType testexpr_booloptype)
+	: CDXLScalarSubqueryQuantified(mp, scalar_op_mdids, scalar_op_mdname,
+								   colids, testexpr_booloptype)
+{
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CDXLScalarSubqueryAll::GetDXLOperator
 //
 //	@doc:
