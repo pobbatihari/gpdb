@@ -113,7 +113,7 @@ private:
 
 	// helper for creating an inner select expression when creating outer apply
 	static CExpression *PexprInnerSelect(CMemoryPool *mp,
-										 CColRefArray *colref_Array,
+										 CColRefArray *colref_array,
 										 CExpression *pexprInner,
 										 CExpression *pexprPredicate,
 										 BOOL *useNotNullableInnerOpt);

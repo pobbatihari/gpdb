@@ -214,9 +214,10 @@ CExpressionPreprocessor::PexprSimplifyQuantifiedSubqueries(CMemoryPool *mp,
 
 	COperator *pop = pexpr->Pop();
 
-	// TODO: - April 4th 2024, currenlty not handled for non-scalar subquery
+	// TODO: - April 4th 2024, currently not handled for subquery with
+	// multiple columns
 	if (CUtils::FQuantifiedSubquery(pop) &&
-		!(CScalarSubqueryQuantified::PopConvert(pop)->IsNonScalarSubq()) &&
+		!(CScalarSubqueryQuantified::PopConvert(pop)->FMultipleColumns()) &&
 		1 == (*pexpr)[0]->DeriveMaxCard().Ull())
 	{
 		CExpression *pexprInner = (*pexpr)[0];
@@ -2682,7 +2683,7 @@ CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 //		+--CScalarSubqueryExists
 //		   +--CLogicalGet "foo" ("foo"), Columns: ["c1" (8) ...] Key sets: {[1,7]}
 //
-// 3. non-scalar subquery with project list
+// 3. multi column scalar subquery with project list
 //		Input:
 //		+--CScalarSubqueryAny(=)["a" (18), "b" (19)]
 //			 |--CLogicalProject
@@ -2746,10 +2747,11 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 
 	if (COperator::EopLogicalProject == pexprRelational->Pop()->Eopid())
 	{
-		if (subqAny->IsNonScalarSubq())
+		if (subqAny->FMultipleColumns())
 		{
 			IMdIdArray *mdids = subqAny->MdIdOps();
-			// Column references of the inner child of non-scalar subquery
+			// Column references of the inner child of multi-column
+			// scalar subquery
 			colref_array = subqAny->Pcrs();
 
 			// project element list
@@ -2781,6 +2783,7 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 							mp, pexprLeftChild, pexprRight,
 							CUtils::ParseCmpType(mdid));
 						pexprScalarChilds->Append(scalarop);
+						break;
 					}
 				}
 			}
@@ -2808,13 +2811,15 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 	{
 		IMdIdArray *mdids = subqAny->MdIdOps();
 
-		if (subqAny->IsNonScalarSubq())
+		if (subqAny->FMultipleColumns())
 		{
-			// Column references of the inner child of non-scalar subquery
+			// Column references of the inner child of multi-column
+			// scalar subquery
 			colref_array = subqAny->Pcrs();
 
-			// create scalar comparisons using columns references of inner
-			// child and outer child of the non-scalar subquery
+			// create scalar comparisons using columns references
+			// of inner child and outer child of the multi-column
+			// scalar subquery
 			for (ULONG ulCol = 0; ulCol < pexprLeft->Arity(); ulCol++)
 			{
 				IMDId *mdid = (*mdids)[ulCol];
@@ -2920,7 +2925,7 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 				return pexprNew;
 			}
 
-			if (subqAny->IsNonScalarSubq())
+			if (subqAny->FMultipleColumns())
 			{
 				CColRefArray *pcrsSubquery =
 					CScalarSubqueryAny::PopConvert(pop)->Pcrs();
@@ -2928,6 +2933,8 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 					(*pexprLogicalChild)[0]->DeriveOutputColumns();
 
 				// bail out if the project list contains inner reference
+				// Example Query:
+				//    select * from foo where (a, b) = ANY(select foo.b, a from bar)
 				for (ULONG ulCol = 0; ulCol < pcrsSubquery->Size(); ulCol++)
 				{
 					if (pcrsRelationalChild->FMember((*pcrsSubquery)[ulCol]))
@@ -2943,7 +2950,7 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 			// of the columns from relational child
 			CColRefSet *pcrsRelationalChild =
 				pexprLogicalChild->DeriveOutputColumns();
-			if (subqAny->IsNonScalarSubq())
+			if (subqAny->FMultipleColumns())
 			{
 				CColRefArray *pcrsSubquery =
 					CScalarSubqueryAny::PopConvert(pop)->Pcrs();

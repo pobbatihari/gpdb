@@ -2549,7 +2549,7 @@ CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 //		CTranslatorDXLToExpr::PexprScalarSubqueryQuantified
 //
 //	@doc:
-// 		Helper for creating non-scalar quantified subquery
+// 		Helper for creating multi-column quantified scalar subquery
 //
 //---------------------------------------------------------------------------
 CExpression *
@@ -2625,7 +2625,7 @@ CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 		CDXLScalarSubqueryQuantified::Cast(pdxlnSubquery->GetOperator());
 	GPOS_ASSERT(nullptr != pdxlopSubqueryQuantified);
 
-	if (pdxlopSubqueryQuantified->IsNonScalarSubq())
+	if (pdxlopSubqueryQuantified->FMultipleColumns())
 	{
 		IMdIdArray *mdids = pdxlopSubqueryQuantified->GetScalarOpMdIds();
 		mdids->AddRef();
@@ -2798,10 +2798,10 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 								   ? EdxlopScalarSubqueryAll
 								   : EdxlopScalarSubqueryAny;
 
-		if (pdxlopSubqueryQuantified->IsNonScalarSubq())
+		if (pdxlopSubqueryQuantified->FMultipleColumns())
 		{
 			// This section is reached only when dealing with a NOT
-			// IN(ANY) non-scalar subquery.
+			// IN(ANY) scalar subquery.
 			CWStringConst str_neq(GPOS_WSZ_LIT("<>"));
 			CScalarBoolOp::EBoolOperator testexpr_booltype =
 				CScalarBoolOp::EboolopOr;

@@ -781,9 +781,10 @@ CXformUtils::QuantifiedToAgg(
 	GPOS_ASSERT(nullptr != ppexprNewSubquery);
 	GPOS_ASSERT(nullptr != ppexprNewScalar);
 
-	// TODO: - April 4th 2024, currenlty not handled for non-scalar subquery
+	// TODO: - April 4th 2024, currently not handled for multi column
+	// scalar subquery
 	if (CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop())
-			->IsNonScalarSubq())
+			->FMultipleColumns())
 	{
 		return;
 	}
@@ -1238,11 +1239,11 @@ CXformUtils::PexprInversePred(CMemoryPool *mp, CExpression *pexprSubquery)
 	CExpression *pexprScalar = (*pexprSubquery)[1];
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-	if (popSqAll->IsNonScalarSubq())
+	if (popSqAll->FMultipleColumns())
 	{
 		IMdIdArray *mdids = popSqAll->MdIdOps();
 
-		CColRefArray *colrefs = popSqAll->Pcrs();
+		CColRefArray *colref_array = popSqAll->Pcrs();
 		const CWStringConst *pstrop = popSqAll->PstrOp();
 
 		// Traverse the scalarValueList (pexprNewScalar) and produce scalar
@@ -1259,7 +1260,7 @@ CXformUtils::PexprInversePred(CMemoryPool *mp, CExpression *pexprSubquery)
 			pexprLeft->AddRef();
 
 			CExpression *scalarcmp =
-				CUtils::PexprScalarCmp(mp, pexprLeft, (*colrefs)[ulCol],
+				CUtils::PexprScalarCmp(mp, pexprLeft, (*colref_array)[ulCol],
 									   CUtils::ParseCmpType(pmdidInverseOp));
 			pscalarchilds->Append(scalarcmp);
 		}

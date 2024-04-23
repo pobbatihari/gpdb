@@ -381,8 +381,9 @@ CLeftJoinPruningPreprocessor::PexprJoinPruningScalarSubquery(
 	{
 		CScalarSubqueryQuantified *subquery_pop =
 			CScalarSubqueryQuantified::PopConvert(pexprScalar->Pop());
-		// TODO: - April 4th 2024, currenlty not handled for non-scalar subquery
-		if (subquery_pop->IsNonScalarSubq())
+		// TODO: - April 4th 2024, currently not handled for
+		// multi-column scalar subquery
+		if (subquery_pop->FMultipleColumns())
 		{
 			pexprScalar->AddRef();
 			pdrgpexpr->Release();

@@ -65,7 +65,7 @@ CScalarSubqueryAll::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	CWStringConst *pstrScalarOp =
 		GPOS_NEW(mp) CWStringConst(mp, PstrOp()->GetBuffer());
 
-	if (IsNonScalarSubq())
+	if (FMultipleColumns())
 	{
 		IMdIdArray *mdids = MdIdOps();
 		CColRefArray *colref_array =

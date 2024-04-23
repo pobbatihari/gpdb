@@ -79,15 +79,15 @@ CParseHandlerScalarSubqueryQuantified::StartElement(
 		CMDName *md_op_name = GPOS_NEW(m_mp) CMDName(m_mp, op_name_str);
 		GPOS_DELETE(op_name_str);
 
-		BOOL isNonScalarSubq =
+		BOOL isMultiColumnScalarSubq =
 			CDXLOperatorFactory::ExtractConvertAttrValueToBool(
 				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenIsNonScalarSubquery, dxl_token,
+				EdxltokenMultiColumnScalarSubquery, dxl_token,
 				true,  // is optional
 				false  // default value
 			);
 
-		if (isNonScalarSubq)
+		if (isMultiColumnScalarSubq)
 		{
 			// parse operator ids
 			const XMLCh *xmlszTypes = CDXLOperatorFactory::ExtractAttrValue(

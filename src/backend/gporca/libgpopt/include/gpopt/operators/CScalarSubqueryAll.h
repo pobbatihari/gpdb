@@ -39,7 +39,7 @@ public:
 					   const CWStringConst *pstrScalarOp,
 					   const CColRef *colref);
 
-	// ctor for non-scalar subquery (BOOLEXPR)
+	// ctor for multi-column scalar subquery(BOOLEXPR)
 	CScalarSubqueryAll(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 					   const CWStringConst *pstrScalarOp,
 					   CColRefArray *colref_array,

@@ -42,7 +42,7 @@ public:
 	CDXLScalarSubqueryAny(CMemoryPool *mp, IMDId *scalar_op_mdid,
 						  CMDName *mdname, ULONG colid);
 
-	// ctor for Non-SCalar subquery (BOOLEXPR)
+	// ctor for multi-column scalar subquery(BOOLEXPR)
 	CDXLScalarSubqueryAny(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 						  CMDName *mdname, ULongPtrArray *colids,
 						  EdxlBoolExprType testexpr_booloptype);
