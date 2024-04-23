@@ -1,5 +1,5 @@
 -----------------------------------------------
--- Testcases regarding non scalar subqueries --
+-- Testcases regarding multi-column scalar subqueries --
 -----------------------------------------------
 -- Setup
 -- start_ignore
@@ -9,36 +9,40 @@ drop table if exists t2_subq;
 NOTICE:  table "t2_subq" does not exist, skipping
 drop table if exists t3_subq;
 NOTICE:  table "t3_subq" does not exist, skipping
-drop table if exists comp_table;
-NOTICE:  table "comp_table" does not exist, skipping
+drop table if exists composite_table;
+NOTICE:  table "composite_table" does not exist, skipping
 create table t1_subq (a int, b int, c int) distributed by (a);
 create table t2_subq (a int, b int, c int) distributed by (a);
 create table t3_subq (a int, b int, c int) distributed by (a);
-create type comp_type as ( a int, b int);
-create table comp_table(id int, item comp_type) distributed by (id);
+create type composite_type as ( a int, b int);
+create table composite_table(id int, item composite_type) distributed by (id);
 -- end_ignore
 insert into t1_subq values (1, 1, null), (2, 1, 1), (1, null, 1), (2, null, 1), (1,1,1), (1,1,0), (0,0,0);
 insert into t2_subq values (1, null, 1), ('123', 456, null), (1, 1, null), (1, 1, 1), (1, 1, 0), (0,0,0);
 insert into t3_subq values (1, 1, null), ('123', 456, null), (1, 1, null);
-insert into comp_table values (1, ROW(1, 10)), (2, ROW(2, 20));
+insert into composite_table values (1, ROW(1, 10)), (2, ROW(2, 20));
 analyze t1_subq, t2_subq, t3_subq;
 set optimizer_trace_fallback to on;
--------------------------------------------
-------- Non-Scalar IN subqueries ----------
--------------------------------------------
+----------------------------------------------------
+------- multi-column scalar IN subqueries ----------
+----------------------------------------------------
 -- Two columns composite key
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
                Filter: ((a = b) AND (b = c))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq);
  a | b | c 
@@ -56,7 +60,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (selec
          ->  Seq Scan on t1_subq
          ->  Hash
                ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (7 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq);
@@ -69,6 +73,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq
 (4 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                  QUERY PLAN                 
 --------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -82,6 +88,8 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (selec
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
  1 | 1 |  
@@ -91,17 +99,19 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t1_subq
 (4 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -109,25 +119,28 @@ select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t1_subq.b from t2_subq)) fr
  t
  
  t
+ t
+ t
+ t
  
- t
- t
- t
 (7 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq) AND t1_subq.b=1;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
-               Filter: ((b = 1) AND (a = 1) AND (c = 1))
+               Filter: ((a = b) AND (b = c) AND (b = 1))
          ->  Materialize
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: 1
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(9 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq) AND t1_subq.b=1;
  a | b | c 
@@ -135,38 +148,42 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq
  1 | 1 | 1
 (1 row)
 
-explain (costs off)  select * from t1_subq where (a, b) IN (select (item).a, (item).b from comp_table);
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
+explain (costs off)  select * from t1_subq where (a, b) IN (select (item).a, (item).b from composite_table);
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  HashAggregate
-         Group Key: (RowIdExpr)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: (RowIdExpr)
-               ->  Hash Join
-                     Hash Cond: (((comp_table.item).a = t1_subq.a) AND ((comp_table.item).b = t1_subq.b))
-                     ->  Seq Scan on comp_table
-                     ->  Hash
-                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                 ->  Seq Scan on t1_subq
- Optimizer: Postgres-based planner
-(12 rows)
+   ->  Hash Semi Join
+         Hash Cond: ((t1_subq.a = ((composite_table.item).a)) AND (t1_subq.b = ((composite_table.item).b)))
+         ->  Seq Scan on t1_subq
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: ((composite_table.item).a)
+                     ->  Seq Scan on composite_table
+ Optimizer: GPORCA
+(9 rows)
 
-select * from t1_subq where (a, b) IN (select (item).a, (item).b from comp_table);
+select * from t1_subq where (a, b) IN (select (item).a, (item).b from composite_table);
  a | b | c 
 ---+---+---
 (0 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
-                        QUERY PLAN                         
------------------------------------------------------------
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                 ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(6 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a = t2_subq.a) AND (t1_subq.b = t2_subq.b)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select ((t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -174,13 +191,15 @@ select ((t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq)) fr
  f
  f
  t
+ t
+ t
+ t
  
- t
- t
- t
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -194,6 +213,8 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t2_subq
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
@@ -205,18 +226,25 @@ select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t2_subq.b from t2_subq)) fr
  t
 (7 rows)
 
-explain (costs off)  select ((a, b) IN (select (item).a, (item).b from comp_table)) from t1_subq;
-                        QUERY PLAN                         
------------------------------------------------------------
+explain (costs off)  select ((a, b) IN (select (item).a, (item).b from composite_table)) from t1_subq;
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                 ->  Seq Scan on comp_table
- Optimizer: Postgres-based planner
-(6 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a = ((composite_table.item).a)) AND (t1_subq.b = ((composite_table.item).b))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on composite_table
+ Optimizer: GPORCA
+(13 rows)
 
-select ((a, b) IN (select (item).a, (item).b from comp_table)) from t1_subq;
+select ((a, b) IN (select (item).a, (item).b from composite_table)) from t1_subq;
  ?column? 
 ----------
  f
@@ -230,17 +258,21 @@ select ((a, b) IN (select (item).a, (item).b from comp_table)) from t1_subq;
 
 -- Three columns composite key
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
-               Filter: ((a = b) AND (b = c))
+               Filter: ((a = b) AND (b = c) AND (c = b))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
  a | b | c 
@@ -258,7 +290,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c
          ->  Seq Scan on t1_subq
          ->  Hash
                ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (7 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
@@ -270,6 +302,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq
 (3 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -285,6 +319,8 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c
 (10 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
  1 | 1 | 1
@@ -292,31 +328,36 @@ select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq
 (2 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq) AND t1_subq.b=1;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
-               Filter: ((b = 1) AND (a = 1) AND (c = 1))
+               Filter: ((a = b) AND (b = c) AND (c = b) AND (b = 1))
          ->  Materialize
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: 1
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(9 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq) AND t1_subq.b=1;
  a | b | c 
@@ -327,39 +368,48 @@ select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq
 select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
  ?column? 
 ----------
+ f
+ 
  
  
  t
  f
  t
- f
- 
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
-                        QUERY PLAN                         
------------------------------------------------------------
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                 ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(6 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a = t2_subq.a) AND (t1_subq.b = t2_subq.b) AND (t1_subq.c = t2_subq.c)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
  ?column? 
 ----------
  f
  f
+ t
+ t
+ t
  
  
- t
- t
- t
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -373,6 +423,8 @@ explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  f
@@ -386,17 +438,21 @@ select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_su
 
 -- Adding const to projection column
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
-               Filter: ((a = (c + 1)) AND ((c + 1) = b))
+               Filter: ((a = (c + 1)) AND (b = (c + 1)))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
  a | b | c 
@@ -405,19 +461,22 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_su
 (1 row)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Hash Semi Join
-         Hash Cond: (t1_subq.a = (t2_subq.c + 1))
+   ->  Hash Join
+         Hash Cond: ((t1_subq.a = ((t2_subq.c + 1))) AND (t1_subq.b = ((t2_subq.c + 1))))
          ->  Seq Scan on t1_subq
-               Filter: (a = b)
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: (t2_subq.c + 1)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(10 rows)
+               ->  GroupAggregate
+                     Group Key: ((t2_subq.c + 1)), ((t2_subq.c + 1))
+                     ->  Sort
+                           Sort Key: ((t2_subq.c + 1)), ((t2_subq.c + 1))
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: ((t2_subq.c + 1))
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
  a | b | c 
@@ -428,6 +487,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_su
 (3 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -445,22 +506,26 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (selec
 (12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
 (0 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
  ?column? 
@@ -475,29 +540,38 @@ select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq)
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
-                        QUERY PLAN                         
------------------------------------------------------------
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                 ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(6 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a = ((t2_subq.c + 1))) AND (t1_subq.b = ((t2_subq.c + 1)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select ((t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
  ?column? 
 ----------
  
  
- t
  
+ t
  t
  t
  
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -511,6 +585,8 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t2_su
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
@@ -524,17 +600,21 @@ select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t2_subq.c+1 from t2_subq)
 
 -- Adding two columns
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
                Filter: ((a = (a + a)) AND (b = (b + b)))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
  a | b | c 
@@ -543,17 +623,17 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t1_subq.
 (1 row)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Semi Join
-         Hash Cond: ((t1_subq.a = (t2_subq.a + t2_subq.a)) AND (t1_subq.b = (t2_subq.b + t2_subq.b)))
+         Hash Cond: ((t1_subq.a = ((t2_subq.a + t2_subq.a))) AND (t1_subq.b = ((t2_subq.b + t2_subq.b))))
          ->  Seq Scan on t1_subq
          ->  Hash
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: (t2_subq.a + t2_subq.a)
+                     Hash Key: ((t2_subq.a + t2_subq.a))
                      ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
@@ -563,6 +643,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a+t2_subq.
 (1 row)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -580,27 +662,31 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (selec
 (12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
  2 | 1 | 1
- 1 | 1 | 0
- 1 | 1 |  
  0 | 0 | 0
  1 | 1 | 1
+ 1 | 1 | 0
+ 1 | 1 |  
 (5 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -615,29 +701,38 @@ select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t1_subq.a, t1_subq.b+t1_s
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ANY(select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
-                        QUERY PLAN                         
------------------------------------------------------------
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                 ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(6 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a = ((t2_subq.a + t2_subq.a))) AND (t1_subq.b = ((t2_subq.b + t2_subq.b)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select  ((t1_subq.a, t1_subq.b) = ANY(select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
  ?column? 
 ----------
  
  
- f
- f
- f
- f
  t
+ f
+ f
+ f
+ f
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -651,6 +746,8 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t2_su
 (8 rows)
 
 select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
@@ -664,22 +761,25 @@ select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t2_subq.a, t1_subq.b+t2_s
 
 -- Nested subquery
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         Filter: (SubPlan 1)
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Hash Semi Join
-                                   Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
-                                   ->  Seq Scan on t2_subq
-                                   ->  Hash
-                                         ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
-(13 rows)
+   ->  Nested Loop Semi Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+               Filter: ((a = a) AND (b = b))
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Hash Semi Join
+                                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
+                                             ->  Seq Scan on t2_subq
+                                             ->  Hash
+                                                   ->  Seq Scan on t3_subq
+ Optimizer: GPORCA
+(16 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
  a | b | c 
@@ -704,7 +804,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (selec
                      ->  Seq Scan on t2_subq
                      ->  Hash
                            ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (11 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
@@ -716,6 +816,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.
 (3 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -737,6 +839,8 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (selec
 (16 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
  1 | 1 |  
@@ -745,33 +849,42 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.
 (3 rows)
 
 explain (costs off) select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                 ->  Hash Semi Join
-                       Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
-                       ->  Seq Scan on t2_subq
-                       ->  Hash
-                             ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
-(10 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a = t2_subq.a) AND (t1_subq.b = t2_subq.b)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Hash Semi Join
+                                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
+                                             ->  Seq Scan on t2_subq
+                                             ->  Hash
+                                                   ->  Seq Scan on t3_subq
+ Optimizer: GPORCA
+(17 rows)
 
 select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
  ?column? 
 ----------
+ f
+ f
+ f
+ t
+ t
  t
  
- t
- t
- f
- f
- f
 (7 rows)
 
 explain (costs off) select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -792,29 +905,31 @@ explain (costs off) select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b
 (15 rows)
 
 select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
+ f
+ f
  t
  f
  t
  t
- f
- f
  f
 (7 rows)
 
 -- Set returning function in projection
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10));
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Semi Join
-         Hash Cond: ((t1_subq.a = (generate_series(1, 10))) AND (t1_subq.b = (generate_series(1, 10))))
+         Hash Cond: ((a = (generate_series(1, 10))) AND (b = (generate_series(1, 10))))
          ->  Seq Scan on t1_subq
          ->  Hash
                ->  ProjectSet
                      ->  Result
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10));
@@ -826,33 +941,41 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select generate_series(1,
 (3 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
-                QUERY PLAN                
-------------------------------------------
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  ProjectSet
-                 ->  Result
- Optimizer: Postgres-based planner
-(6 rows)
+   ->  GroupAggregate
+         Group Key: a, b, ctid, gp_segment_id
+         ->  Sort
+               Sort Key: a, b, ctid, gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((a = (generate_series(1, 10))) AND (b = (generate_series(1, 10)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  ProjectSet
+                                 ->  Result
+ Optimizer: GPORCA
+(12 rows)
 
 select  ((t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
  ?column? 
 ----------
  f
  
+ f
+ t
+ t
  t
  
- t
- t
- f
 (7 rows)
 
--------------------------------------------
-------- Non-Scalar ALL subqueries ----------
--------------------------------------------
+-----------------------------------------------------
+------- multi-column scalar ALL subqueries ----------
+-----------------------------------------------------
 -- Two columns composite key
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -867,6 +990,8 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
  2 | 1 | 1
@@ -886,7 +1011,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a, t2_subq.b from t2_subq);
@@ -895,6 +1020,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a, t2_s
 (0 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -909,29 +1036,33 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
 (0 rows)
 
-explain (costs off)  select * from t1_subq where (a, b) = ALL (select (item).a, (item).b from comp_table);
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
+explain (costs off)  select * from t1_subq where (a, b) = ALL (select (item).a, (item).b from composite_table);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Left Anti Semi (Not-In) Join
-         Join Filter: ((t1_subq.a <> (comp_table.item).a) OR (t1_subq.b <> (comp_table.item).b))
+         Join Filter: ((t1_subq.a <> ((composite_table.item).a)) OR (t1_subq.b <> ((composite_table.item).b)))
          ->  Seq Scan on t1_subq
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on comp_table
- Optimizer: Postgres-based planner
+                     ->  Seq Scan on composite_table
+ Optimizer: GPORCA
 (8 rows)
 
-select * from t1_subq where (a, b) = ALL (select (item).a, (item).b from comp_table);
+select * from t1_subq where (a, b) = ALL (select (item).a, (item).b from composite_table);
  a | b | c 
 ---+---+---
 (0 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -945,6 +1076,8 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_s
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
@@ -957,16 +1090,22 @@ select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq))
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -981,6 +1120,8 @@ select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a, t2_subq.b from t2_subq))
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -994,6 +1135,8 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_s
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  f
@@ -1005,19 +1148,25 @@ select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_subq.b from t2_subq))
  f
 (7 rows)
 
-explain (costs off) select ((a, b) = ALL (select (item).a, (item).b from comp_table)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+explain (costs off) select ((a, b) = ALL (select (item).a, (item).b from composite_table)) from t1_subq;
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on comp_table
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> ((composite_table.item).a)) OR (t1_subq.b <> ((composite_table.item).b))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on composite_table
+ Optimizer: GPORCA
+(13 rows)
 
-select ((a, b) = ALL (select (item).a, (item).b from comp_table)) from t1_subq;
+select ((a, b) = ALL (select (item).a, (item).b from composite_table)) from t1_subq;
  ?column? 
 ----------
  f
@@ -1031,6 +1180,8 @@ select ((a, b) = ALL (select (item).a, (item).b from comp_table)) from t1_subq;
 
 -- Three columns composite key
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1045,6 +1196,8 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
  1 | 1 | 1
@@ -1061,7 +1214,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
@@ -1070,6 +1223,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_s
 (0 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1084,11 +1239,15 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
 (0 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1102,6 +1261,8 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_
 (8 rows)
 
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  f
@@ -1114,16 +1275,22 @@ select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b) OR (t1_subq.c <> t2_subq.c)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
  ?column? 
@@ -1138,6 +1305,8 @@ select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_subq.a, t2_subq.b, t
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1151,11 +1320,13 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_
 (8 rows)
 
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
+ f
+ f
  
- f
- f
  f
  f
  f
@@ -1164,6 +1335,8 @@ select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t
 
 -- Adding const to projection column
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.c+1, t1_subq.c+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1178,23 +1351,26 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(sel
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.c+1, t1_subq.c+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
  1 | 1 | 0
 (1 row)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t2_subq.c+1, t2_subq.c+1 from t2_subq);
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Left Anti Semi (Not-In) Join
-         Join Filter: ((t1_subq.a <> (t2_subq.c + 1)) OR (t1_subq.b <> (t2_subq.c + 1)))
+         Join Filter: ((t1_subq.a <> ((t2_subq.c + 1))) OR (t1_subq.b <> ((t2_subq.c + 1))))
          ->  Seq Scan on t1_subq
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Result
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t2_subq.c+1, t2_subq.c+1 from t2_subq);
  a | b | c 
@@ -1202,6 +1378,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t2_subq.c+1, t2_
 (0 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1216,11 +1394,15 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(sel
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
 (0 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1234,28 +1416,36 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t1
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
- f
- 
  
  f
  f
  t
  f
+ f
+ 
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> ((t2_subq.c + 1))) OR (t1_subq.b <> ((t2_subq.c + 1)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
  ?column? 
@@ -1270,6 +1460,8 @@ select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.c+1, t2_subq.c+1 from t2_su
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1283,6 +1475,8 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t2
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  f
@@ -1296,6 +1490,8 @@ select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t2_subq.c+1 from t2_su
 
 -- Adding two columns
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1310,22 +1506,24 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
  0 | 0 | 0
 (1 row)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Left Anti Semi (Not-In) Join
-         Join Filter: ((t1_subq.a <> (t2_subq.a + t2_subq.a)) OR (t1_subq.b <> (t2_subq.b + t2_subq.b)))
+         Join Filter: ((t1_subq.a <> ((t2_subq.a + t2_subq.a))) OR (t1_subq.b <> ((t2_subq.b + t2_subq.b))))
          ->  Seq Scan on t1_subq
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
@@ -1334,6 +1532,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_su
 (0 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1348,11 +1548,15 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
 (9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
 (0 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1366,6 +1570,8 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_s
 (8 rows)
 
 select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  f
@@ -1378,16 +1584,22 @@ select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> ((t2_subq.a + t2_subq.a))) OR (t1_subq.b <> ((t2_subq.b + t2_subq.b)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select  ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -1402,6 +1614,8 @@ select  ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1415,6 +1629,8 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_s
 (8 rows)
 
 select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  f
@@ -1428,6 +1644,8 @@ select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_
 
 -- Nested subquery
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1446,6 +1664,8 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
 (13 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
  2 | 1 | 1
@@ -1469,7 +1689,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
                            ->  Seq Scan on t2_subq
                            ->  Hash
                                  ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
@@ -1478,6 +1698,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_su
 (0 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1499,31 +1721,39 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
 (16 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b | c 
 ---+---+---
+ 2 |   | 1
  1 | 1 |  
  1 |   | 1
  1 | 1 | 1
  1 | 1 | 0
  0 | 0 | 0
- 2 |   | 1
 (6 rows)
 
 explain (costs off) select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Hash Semi Join
-                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
-                             ->  Seq Scan on t2_subq
-                             ->  Hash
-                                   ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
-(11 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Hash Semi Join
+                                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
+                                             ->  Seq Scan on t2_subq
+                                             ->  Hash
+                                                   ->  Seq Scan on t3_subq
+ Optimizer: GPORCA
+(17 rows)
 
 select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
  ?column? 
@@ -1538,6 +1768,8 @@ select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq whe
 (7 rows)
 
 explain (costs off) select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1558,29 +1790,31 @@ explain (costs off) select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_sub
 (15 rows)
 
 select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
+ t
+ t
+ t
+ t
+ t
  f
- t
- t
- t
- t
- t
  t
 (7 rows)
 
 -- Set returning function in projection
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10));
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Left Anti Semi (Not-In) Join
-         Join Filter: ((t1_subq.a <> (generate_series(1, 10))) OR (t1_subq.b <> (generate_series(1, 10))))
+         Join Filter: ((a <> (generate_series(1, 10))) OR (b <> (generate_series(1, 10))))
          ->  Seq Scan on t1_subq
          ->  Materialize
                ->  ProjectSet
                      ->  Result
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10));
@@ -1589,16 +1823,21 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select generate_series
 (0 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
-                QUERY PLAN                
-------------------------------------------
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  ProjectSet
-                       ->  Result
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: a, b, ctid, gp_segment_id
+         ->  Sort
+               Sort Key: a, b, ctid, gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((a <> (generate_series(1, 10))) OR (b <> (generate_series(1, 10)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  ProjectSet
+                                 ->  Result
+ Optimizer: GPORCA
+(12 rows)
 
 select  ((t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
  ?column? 
@@ -1612,22 +1851,26 @@ select  ((t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_s
  f
 (7 rows)
 
--------------------------------------------
-------- Non-Scalar != ANY subqueries ----------
--------------------------------------------
+--------------------------------------------------------
+------- multi-column scalar != ANY subqueries ----------
+--------------------------------------------------------
 -- Two columns composite key
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
                Filter: ((a <> a) OR (b <> b))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq);
  a | b | c 
@@ -1644,7 +1887,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (s
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_subq.b from t2_subq);
@@ -1660,6 +1903,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_
 (7 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1673,52 +1918,61 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (s
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
- 2 | 1 | 1
  1 | 1 |  
  1 | 1 | 1
  1 | 1 | 0
  0 | 0 | 0
+ 2 | 1 | 1
 (5 rows)
 
-explain (costs off)  select * from t1_subq where (a, b) != any(select (item).a, (item).b from comp_table);
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
+explain (costs off)  select * from t1_subq where (a, b) != any(select (item).a, (item).b from composite_table);
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop Semi Join
-         Join Filter: ((t1_subq.a <> (comp_table.item).a) OR (t1_subq.b <> (comp_table.item).b))
-         ->  Seq Scan on t1_subq
-         ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on comp_table
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: t1_subq.ctid, t1_subq.gp_segment_id
+                     ->  Nested Loop
+                           Join Filter: ((t1_subq.a <> ((composite_table.item).a)) OR (t1_subq.b <> ((composite_table.item).b)))
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on composite_table
+                           ->  Seq Scan on t1_subq
+ Optimizer: GPORCA
+(13 rows)
 
-select * from t1_subq where (a, b) != any(select (item).a, (item).b from comp_table);
+select * from t1_subq where (a, b) != any(select (item).a, (item).b from composite_table);
  a | b | c 
 ---+---+---
  2 | 1 | 1
- 2 |   | 1
- 1 | 1 |  
  1 |   | 1
  1 | 1 | 1
+ 1 | 1 |  
  1 | 1 | 0
+ 2 |   | 1
  0 | 0 | 0
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -1733,16 +1987,22 @@ select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq)
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -1757,6 +2017,8 @@ select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_subq.b from t2_subq)
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1770,30 +2032,38 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
  
  t
- t
- t
- t
  
+ t
+ t
+ t
 (7 rows)
 
-explain (costs off)  select ((a, b) != ANY (select (item).a, (item).b from comp_table)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+explain (costs off)  select ((a, b) != ANY (select (item).a, (item).b from composite_table)) from t1_subq;
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on comp_table
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> ((composite_table.item).a)) OR (t1_subq.b <> ((composite_table.item).b))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on composite_table
+ Optimizer: GPORCA
+(13 rows)
 
-select ((a, b) != ANY (select (item).a, (item).b from comp_table)) from t1_subq;
+select ((a, b) != ANY (select (item).a, (item).b from composite_table)) from t1_subq;
  ?column? 
 ----------
  t
@@ -1807,23 +2077,27 @@ select ((a, b) != ANY (select (item).a, (item).b from comp_table)) from t1_subq;
 
 -- Three columns composite key
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
                Filter: ((a <> b) OR (b <> c) OR (c <> b))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
  a | b | c 
 ---+---+---
- 2 | 1 | 1
  1 | 1 | 0
+ 2 | 1 | 1
 (2 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
@@ -1836,7 +2110,7 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
@@ -1852,6 +2126,8 @@ select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_
 (7 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1865,28 +2141,32 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
- 2 | 1 | 1
- 2 |   | 1
  1 |   | 1
  1 | 1 | 1
  1 | 1 | 0
  0 | 0 | 0
+ 2 | 1 | 1
+ 2 |   | 1
 (6 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -1901,16 +2181,22 @@ select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, 
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b) OR (t1_subq.c <> t2_subq.c)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
  ?column? 
@@ -1925,6 +2211,8 @@ select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, 
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1938,6 +2226,8 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1
 (8 rows)
 
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
@@ -1951,53 +2241,60 @@ select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, 
 
 -- Adding const to projection column
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
                Filter: ((a <> (c + 1)) OR (b <> (c + 1)))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
  a | b | c 
 ---+---+---
+ 2 | 1 | 1
  1 |   | 1
  1 | 1 | 1
  0 | 0 | 0
- 2 | 1 | 1
 (4 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
-         Join Filter: ((t1_subq.a <> (t2_subq.c + 1)) OR (t1_subq.b <> (t2_subq.c + 1)))
+         Join Filter: ((t1_subq.a <> ((t2_subq.c + 1))) OR (t1_subq.b <> ((t2_subq.c + 1))))
          ->  Seq Scan on t1_subq
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Result
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(9 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
  a | b | c 
 ---+---+---
+ 2 | 1 | 1
+ 2 |   | 1
  1 | 1 |  
  1 |   | 1
  1 | 1 | 1
  1 | 1 | 0
  0 | 0 | 0
- 2 | 1 | 1
- 2 |   | 1
 (7 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2011,6 +2308,8 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (s
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
  2 | 1 | 1
@@ -2023,17 +2322,19 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+1, t
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
  ?column? 
@@ -2048,16 +2349,22 @@ select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_s
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> ((t2_subq.c + 1))) OR (t1_subq.b <> ((t2_subq.c + 1)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
  ?column? 
@@ -2072,6 +2379,8 @@ select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_s
 (7 rows)
 
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2085,6 +2394,8 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t
 (8 rows)
 
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
@@ -2098,55 +2409,61 @@ select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t2_subq.c+1 from t2_s
 
 -- Adding two columns
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
+         Join Filter: true
          ->  Seq Scan on t1_subq
                Filter: ((a <> (a + a)) OR (b <> (b + b)))
          ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(12 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
  a | b | c 
 ---+---+---
- 2 | 1 | 1
- 2 |   | 1
  1 | 1 |  
  1 |   | 1
  1 | 1 | 1
  1 | 1 | 0
+ 2 | 1 | 1
+ 2 |   | 1
 (6 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
-         Join Filter: ((t1_subq.a <> (t2_subq.a + t2_subq.a)) OR (t1_subq.b <> (t2_subq.b + t2_subq.b)))
+         Join Filter: ((t1_subq.a <> ((t2_subq.a + t2_subq.a))) OR (t1_subq.b <> ((t2_subq.b + t2_subq.b))))
          ->  Seq Scan on t1_subq
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
+ Optimizer: GPORCA
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
  a | b | c 
 ---+---+---
+ 2 | 1 | 1
+ 2 |   | 1
  1 | 1 |  
  1 |   | 1
  1 | 1 | 1
  1 | 1 | 0
  0 | 0 | 0
- 2 | 1 | 1
- 2 |   | 1
 (7 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2160,29 +2477,33 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (s
 (8 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
- 2 | 1 | 1
- 2 |   | 1
  1 | 1 |  
  1 |   | 1
  1 | 1 | 1
  1 | 1 | 0
  0 | 0 | 0
+ 2 | 1 | 1
+ 2 |   | 1
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  Nested Loop Left Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(10 rows)
 
 select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -2197,16 +2518,22 @@ select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on t2_subq
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> ((t2_subq.a + t2_subq.a))) OR (t1_subq.b <> ((t2_subq.b + t2_subq.b)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t2_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select  ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
  ?column? 
@@ -2221,6 +2548,8 @@ select  ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                               QUERY PLAN                               
 -----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2234,6 +2563,8 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_
 (8 rows)
 
 select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
  t
@@ -2247,22 +2578,25 @@ select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2
 
 -- Nested subquery
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         Filter: (SubPlan 1)
-         SubPlan 1
-           ->  Result
-                 ->  Materialize
-                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                             ->  Hash Semi Join
-                                   Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
-                                   ->  Seq Scan on t2_subq
-                                   ->  Hash
-                                         ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
-(13 rows)
+   ->  Nested Loop Semi Join
+         Join Filter: true
+         ->  Seq Scan on t1_subq
+               Filter: ((a <> a) OR (b <> b))
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Limit
+                                       ->  Hash Semi Join
+                                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
+                                             ->  Seq Scan on t2_subq
+                                             ->  Hash
+                                                   ->  Seq Scan on t3_subq
+ Optimizer: GPORCA
+(16 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
  a | b | c 
@@ -2270,42 +2604,45 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a,t1_s
 (0 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Result
-         ->  Unique
-               Group Key: (RowIdExpr)
-               ->  Sort
-                     Sort Key: (RowIdExpr)
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: (RowIdExpr)
-                           ->  Nested Loop
-                                 Join Filter: ((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b))
-                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.c, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: t1_subq.ctid, t1_subq.gp_segment_id
+                     ->  Hash Semi Join
+                           Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: t2_subq.a
+                                 ->  Nested Loop
+                                       Join Filter: ((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b))
                                        ->  Seq Scan on t1_subq
-                                 ->  Materialize
-                                       ->  Hash Semi Join
-                                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
-                                             ->  Seq Scan on t2_subq
-                                             ->  Hash
-                                                   ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
-(19 rows)
+                                       ->  Materialize
+                                             ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                   ->  Seq Scan on t2_subq
+                           ->  Hash
+                                 ->  Seq Scan on t3_subq
+ Optimizer: GPORCA
+(20 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
  a | b | c 
 ---+---+---
  1 | 1 |  
  1 | 1 | 0
- 2 | 1 | 1
  2 |   | 1
+ 0 | 0 | 0
+ 2 | 1 | 1
  1 |   | 1
  1 | 1 | 1
- 0 | 0 | 0
 (7 rows)
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2327,26 +2664,34 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (s
 (16 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
  a | b | c 
 ---+---+---
  2 | 1 | 1
 (1 row)
 
 explain (costs off) select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Hash Semi Join
-                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
-                             ->  Seq Scan on t2_subq
-                             ->  Hash
-                                   ->  Seq Scan on t3_subq
- Optimizer: Postgres-based planner
-(11 rows)
+   ->  GroupAggregate
+         Group Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+         ->  Sort
+               Sort Key: t1_subq.a, t1_subq.b, t1_subq.ctid, t1_subq.gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((t1_subq.a <> t2_subq.a) OR (t1_subq.b <> t2_subq.b)) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  Result
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Hash Semi Join
+                                             Hash Cond: ((t2_subq.a = t3_subq.a) AND (t2_subq.b = t3_subq.b))
+                                             ->  Seq Scan on t2_subq
+                                             ->  Hash
+                                                   ->  Seq Scan on t3_subq
+ Optimizer: GPORCA
+(17 rows)
 
 select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
  ?column? 
@@ -2361,6 +2706,8 @@ select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq wh
 (7 rows)
 
 explain (costs off) select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2381,54 +2728,66 @@ explain (costs off) select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_su
 (15 rows)
 
 select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? 
 ----------
+ f
+ f
+ f
+ f
+ f
  t
- f
- f
- f
- f
- f
  f
 (7 rows)
 
 -- Set returning function in projection
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10));
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop Semi Join
-         Join Filter: ((t1_subq.a <> (generate_series(1, 10))) OR (t1_subq.b <> (generate_series(1, 10))))
-         ->  Seq Scan on t1_subq
-         ->  Materialize
-               ->  ProjectSet
-                     ->  Result
- Optimizer: Postgres-based planner
-(8 rows)
+   ->  GroupAggregate
+         Group Key: a, b, c, ctid, gp_segment_id
+         ->  Sort
+               Sort Key: ctid, gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: ctid, gp_segment_id
+                     ->  Nested Loop
+                           Join Filter: ((a <> (generate_series(1, 10))) OR (b <> (generate_series(1, 10))))
+                           ->  ProjectSet
+                                 ->  Result
+                           ->  Seq Scan on t1_subq
+ Optimizer: GPORCA
+(13 rows)
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10));
  a | b | c 
 ---+---+---
- 2 | 1 | 1
- 2 |   | 1
  1 | 1 |  
+ 1 | 1 | 0
+ 2 | 1 | 1
  1 |   | 1
  1 | 1 | 1
- 1 | 1 | 0
+ 2 |   | 1
  0 | 0 | 0
 (7 rows)
 
 explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
-                QUERY PLAN                
-------------------------------------------
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t1_subq
-         SubPlan 1
-           ->  Materialize
-                 ->  ProjectSet
-                       ->  Result
- Optimizer: Postgres-based planner
-(7 rows)
+   ->  GroupAggregate
+         Group Key: a, b, ctid, gp_segment_id
+         ->  Sort
+               Sort Key: a, b, ctid, gp_segment_id
+               ->  Nested Loop Left Join
+                     Join Filter: (((a <> (generate_series(1, 10))) OR (b <> (generate_series(1, 10)))) IS NOT FALSE)
+                     ->  Seq Scan on t1_subq
+                     ->  Materialize
+                           ->  ProjectSet
+                                 ->  Result
+ Optimizer: GPORCA
+(12 rows)
 
 select  ((t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
  ?column? 
@@ -2443,5 +2802,3 @@ select  ((t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_
 (7 rows)
 
 reset optimizer_trace_fallback;
-drop table t1_subq, t2_subq, t3_subq, comp_table;
-drop type comp_type;

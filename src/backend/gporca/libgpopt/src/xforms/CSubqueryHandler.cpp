@@ -231,8 +231,8 @@ CSubqueryHandler::PexprSubqueryPred(CExpression *pexprOuter,
 	CScalarSubqueryQuantified *popSqQuantified =
 		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
 
-	// if non-scalar subquery
-	if (popSqQuantified->IsNonScalarSubq())
+	// if multi-column scalar subquery
+	if (popSqQuantified->FMultipleColumns())
 	{
 		IMdIdArray *mdids = popSqQuantified->MdIdOps();
 		CColRefArray *colref_array = popSqQuantified->Pcrs();
@@ -1159,7 +1159,7 @@ CSubqueryHandler::FCreateOuterApplyForExistOrQuant(
 		CScalarSubqueryQuantified *QuantSubq =
 			CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
 
-		if (QuantSubq->IsNonScalarSubq())
+		if (QuantSubq->FMultipleColumns())
 		{
 			pcrSubquery = QuantSubq->Pcrs();
 			pcrSubquery->AddRef();
@@ -1271,12 +1271,12 @@ CSubqueryHandler::FCreateCorrelatedApplyForQuantifiedSubquery(
 	CScalarSubqueryQuantified *popSubquery =
 		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
 
-	// TODO: - April 4th 2024, We avoid creating correlated plans for non-scalar
-	// subqueries because we currently do not maintain the original column order
-	// specified in the query across optimization, which results in generating
-	// an incorrect subplans
+	// TODO: - April 4th 2024, We avoid creating correlated plans for scalar
+	// subqueries with multiple columns because we currently do not maintain
+	// the original column order specified in the query across optimization,
+	// which results in generating an incorrect subplans
 
-	if (popSubquery->IsNonScalarSubq())
+	if (popSubquery->FMultipleColumns())
 	{
 		*ppexprNewOuter = pexprOuter;
 		return false;
@@ -1531,16 +1531,16 @@ CSubqueryHandler::FRemoveAnySubquery(CExpression *pexprOuter,
 	CExpression *pexprInner = (*pexprSubquery)[0];
 	BOOL fOuterRefsUnderInner = pexprInner->HasOuterRefs();
 
-	CColRefArray *colref_Array = nullptr;
-	if (pScalarSubqAny->IsNonScalarSubq())
+	CColRefArray *colref_array = nullptr;
+	if (pScalarSubqAny->FMultipleColumns())
 	{
-		colref_Array = pScalarSubqAny->Pcrs();
-		colref_Array->AddRef();
+		colref_array = pScalarSubqAny->Pcrs();
+		colref_array->AddRef();
 	}
 	else
 	{
-		colref_Array = GPOS_NEW(mp) CColRefArray(mp);
-		colref_Array->Append(const_cast<CColRef *>(pScalarSubqAny->Pcr()));
+		colref_array = GPOS_NEW(mp) CColRefArray(mp);
+		colref_array->Append(const_cast<CColRef *>(pScalarSubqAny->Pcr()));
 	}
 
 	COperator::EOperatorId eopidSubq = pexprSubquery->Pop()->Eopid();
@@ -1561,13 +1561,13 @@ CSubqueryHandler::FRemoveAnySubquery(CExpression *pexprOuter,
 	if (EsqctxtValue == esqctxt)
 	{
 		CExpression *pexprNewSelect =
-			PexprInnerSelect(mp, colref_Array, pexprResult, pexprPredicate,
+			PexprInnerSelect(mp, colref_array, pexprResult, pexprPredicate,
 							 &fUseNotNullableInnerOpt);
 		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-		if (pScalarSubqAny->IsNonScalarSubq())
+		if (pScalarSubqAny->FMultipleColumns())
 		{
-			// avoid generating correlated plans for non-scalar subqueries due
+			// avoid generating correlated plans for multi-column scalar subqueries due
 			// to the lack of maintenance of the original column order specified
 			// in the queries, leading to the generation of incorrect subplans
 			fUseCorrelated = false;
@@ -1611,14 +1611,14 @@ CSubqueryHandler::FRemoveAnySubquery(CExpression *pexprOuter,
 				mp, pexprOuter, pexprSubquery, esqctxt, ppexprNewOuter,
 				ppexprResidualScalar);
 		}
-		colref_Array->Release();
+		colref_array->Release();
 	}
 	else
 	{
 		GPOS_ASSERT(EsqctxtFilter == esqctxt);
 
 		*ppexprNewOuter = CUtils::PexprLogicalApply<CLogicalLeftSemiApplyIn>(
-			mp, pexprOuter, pexprSelect, colref_Array, eopidSubq);
+			mp, pexprOuter, pexprSelect, colref_array, eopidSubq);
 		*ppexprResidualScalar =
 			CUtils::PexprScalarConstBool(mp, true /*value*/);
 	}
@@ -1721,16 +1721,16 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 	CExpression *pexprInner = (*pexprSubquery)[0];
 	COperator::EOperatorId eopidSubq = pexprSubquery->Pop()->Eopid();
 
-	CColRefArray *colrefs = nullptr;
-	if (popSubqueryAll->IsNonScalarSubq())
+	CColRefArray *colref_array = nullptr;
+	if (popSubqueryAll->FMultipleColumns())
 	{
-		colrefs = popSubqueryAll->Pcrs();
-		colrefs->AddRef();
+		colref_array = popSubqueryAll->Pcrs();
+		colref_array->AddRef();
 	}
 	else
 	{
-		colrefs = GPOS_NEW(mp) CColRefArray(mp);
-		colrefs->Append(const_cast<CColRef *>(popSubqueryAll->Pcr()));
+		colref_array = GPOS_NEW(mp) CColRefArray(mp);
+		colref_array->Append(const_cast<CColRef *>(popSubqueryAll->Pcr()));
 	}
 
 	BOOL fOuterRefsUnderInner = pexprInner->HasOuterRefs();
@@ -1746,10 +1746,10 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 			// build subquery quantified comparison
 			CExpression *pexprResult = nullptr;
 
-			if (popSubqueryAll->IsNonScalarSubq())
+			if (popSubqueryAll->FMultipleColumns())
 			{
 				fSuccess = false;
-				colrefs->Release();
+				colref_array->Release();
 				*ppexprNewOuter = pexprOuter;
 				return fSuccess;
 			}
@@ -1761,7 +1761,7 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 
 			*ppexprNewOuter = CUtils::PexprLogicalApply<
 				CLogicalLeftAntiSemiCorrelatedApplyNotIn>(
-				mp, pexprOuter, pexprResult, colrefs, eopidSubq,
+				mp, pexprOuter, pexprResult, colref_array, eopidSubq,
 				pexprPredicate);
 			return fSuccess;
 		}
@@ -1779,9 +1779,9 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 
 	if (EsqctxtValue == esqctxt)
 	{
-		if (popSubqueryAll->IsNonScalarSubq())
+		if (popSubqueryAll->FMultipleColumns())
 		{
-			// Avoid generating correlated plans for non-scalar subqueries due
+			// Avoid generating correlated plans for multi-column scalar subqueries due
 			// to the lack of maintenance of the original column order specified
 			// in the queries, leading to the generation of incorrect subplans.
 			fUseCorrelated = false;
@@ -1809,8 +1809,9 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 			}
 		}
 
-		CExpression *pexprInnerSelect = PexprInnerSelect(
-			mp, colrefs, pexprInner, pexprPredicate, &fUseNotNullOptimization);
+		CExpression *pexprInnerSelect =
+			PexprInnerSelect(mp, colref_array, pexprInner, pexprPredicate,
+							 &fUseNotNullOptimization);
 
 		if (!fUseCorrelated)
 		{
@@ -1830,7 +1831,7 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 		// cleanup
 		pexprInner->Release();
 		pexprPredicate->Release();
-		colrefs->Release();
+		colref_array->Release();
 	}
 	else
 	{
@@ -1839,7 +1840,8 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 		*ppexprResidualScalar = CUtils::PexprScalarConstBool(mp, true);
 		*ppexprNewOuter =
 			CUtils::PexprLogicalApply<CLogicalLeftAntiSemiApplyNotIn>(
-				mp, pexprOuter, pexprInner, colrefs, eopidSubq, pexprPredicate);
+				mp, pexprOuter, pexprInner, colref_array, eopidSubq,
+				pexprPredicate);
 	}
 
 	return fSuccess;

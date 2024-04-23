@@ -1988,13 +1988,10 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 	// operator name of suqbuery
 	const CWStringConst *str = nullptr;
 
-	// is subquery non-scalar
-	BOOL is_nonscalar_subq = false;
-
-	// mdids of non-scalar subquery
+	// mdids of multi-column scalar subquery
 	IMdIdArray *mdids = nullptr;
 
-	// booltype of non-scalar subquery testexpr
+	// booltype of subquery testexpr
 	EdxlBoolExprType testexpr_booltype = EdxlBoolExprTypeSentinel;
 
 	// outer dxlnode
@@ -2002,12 +1999,11 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 
 	if (IsA(sublink->testexpr, BoolExpr))
 	{
-		// If the type of the test expression (testexpr) is BoolExpr,
-		// considering the subquery type is a non-scalar subquery.
-		// because a BoolExpr typically involves conditions that expect
-		// multiple values rather than just a single value.
+		// If the sublink testexpr type is BoolExpr, considering it as
+		// multi-column scalar subquery.  because a BoolExpr typically
+		// involves conditions that expect multiple values rather than
+		// just a single value.
 
-		is_nonscalar_subq = true;
 		mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 
 		// output columns of 'testexpr' are stored within outer_dxlnode
@@ -2020,7 +2016,7 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 		testexpr_booltype = EdxlbooltypeFromGPDBBoolType(bool_expr->boolop);
 		ListCell *lc;
 
-		// non-scalar subquery operator name
+		// operator name
 		const char *chstr = strVal(llast(sublink->operName));
 		str = GPOS_NEW(m_mp) CWStringConst(m_mp, chstr);
 
@@ -2074,7 +2070,7 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 				ANY_SUBLINK == sublink->subLinkType);
 	if (ALL_SUBLINK == sublink->subLinkType)
 	{
-		if (is_nonscalar_subq)
+		if (mdids != nullptr && mdids->Size() > 1)
 		{
 			subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(
 				m_mp, mdids, GPOS_NEW(m_mp) CMDName(m_mp, str), colids,
@@ -2090,7 +2086,7 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 	}
 	else
 	{
-		if (is_nonscalar_subq)
+		if (mdids != nullptr && mdids->Size() > 1)
 		{
 			subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(
 				m_mp, mdids, GPOS_NEW(m_mp) CMDName(m_mp, str), colids,

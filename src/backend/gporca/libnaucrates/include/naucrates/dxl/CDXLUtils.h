@@ -270,6 +270,10 @@ public:
 	static CWStringDynamic *SerializeToCommaSeparatedString(
 		CMemoryPool *mp, const StringPtrArray *pdrgpsz);
 
+	// serialize a list of mdids into a comma-separate string
+	static CWStringDynamic *SerializeToCommaSeparatedString(
+		CMemoryPool *mp, IMdIdArray *pdrgpsz);
+
 	// decode a byte array from a string
 	static BYTE *DecodeByteArrayFromString(CMemoryPool *mp,
 										   const CWStringDynamic *dxl_string,

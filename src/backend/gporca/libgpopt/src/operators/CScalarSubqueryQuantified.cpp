@@ -65,7 +65,6 @@ CScalarSubqueryQuantified::CScalarSubqueryQuantified(
 	  m_testexprBoolopType(testexpr_booloptype)
 
 {
-	m_isNonscalarSubq = true;
 	m_scalar_op_mdid = (*scalar_op_mdids)[0];
 	GPOS_ASSERT(nullptr != scalar_op_mdids);
 	GPOS_ASSERT(nullptr != pstrScalarOp);
@@ -83,7 +82,7 @@ CScalarSubqueryQuantified::CScalarSubqueryQuantified(
 CScalarSubqueryQuantified::~CScalarSubqueryQuantified()
 {
 	GPOS_DELETE(m_pstrScalarOp);
-	if (IsNonScalarSubq())
+	if (FMultipleColumns())
 	{
 		m_scalar_op_mdids->Release();
 		m_colref_array->Release();
@@ -156,7 +155,7 @@ CScalarSubqueryQuantified::HashValue() const
 {
 	return gpos::CombineHashes(
 		COperator::HashValue(),
-		IsNonScalarSubq()
+		FMultipleColumns()
 			? gpos::CombineHashes(gpos::HashPtr<IMdIdArray>(m_scalar_op_mdids),
 								  gpos::HashPtr<CColRefArray>(m_colref_array))
 			: gpos::CombineHashes(m_scalar_op_mdid->HashValue(),
@@ -184,10 +183,10 @@ CScalarSubqueryQuantified::Matches(COperator *pop) const
 	CScalarSubqueryQuantified *popSsq =
 		CScalarSubqueryQuantified::PopConvert(pop);
 
-	return IsNonScalarSubq() ? popSsq->Pcrs()->Equals(m_colref_array) &&
-								   popSsq->MdIdOps()->Equals(m_scalar_op_mdids)
-							 : popSsq->Pcr() == m_pcr &&
-								   popSsq->MdIdOp()->Equals(m_scalar_op_mdid);
+	return FMultipleColumns() ? popSsq->Pcrs()->Equals(m_colref_array) &&
+									popSsq->MdIdOps()->Equals(m_scalar_op_mdids)
+							  : popSsq->Pcr() == m_pcr &&
+									popSsq->MdIdOp()->Equals(m_scalar_op_mdid);
 }
 
 
@@ -208,7 +207,7 @@ CScalarSubqueryQuantified::PcrsUsed(CMemoryPool *mp, CExpressionHandle &exprhdl)
 	CColRefSet *pcrsChildOutput =
 		exprhdl.DeriveOutputColumns(0 /* child_index */);
 
-	if (IsNonScalarSubq())
+	if (FMultipleColumns())
 	{
 		CColRefArray *colref_array = Pcrs();
 		for (ULONG ulCol = 0; ulCol < colref_array->Size(); ulCol++)
@@ -267,7 +266,7 @@ CScalarSubqueryQuantified::OsPrint(IOstream &os) const
 	os << SzId();
 	os << "(" << PstrOp()->GetBuffer() << ")";
 	os << "[";
-	if (IsNonScalarSubq())
+	if (FMultipleColumns())
 	{
 		for (ULONG col = 0; col < m_colref_array->Size(); col++)
 		{

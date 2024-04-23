@@ -111,7 +111,7 @@ private:
 		Edxlopid edxlopid, IMDId *scalar_op_mdid, const CWStringConst *str,
 		ULONG colid, CDXLNode *pdxlnLogicalChild, CDXLNode *pdxlnScalarChild);
 
-	// helper for creating quantified non-scalar subquery
+	// helper for creating multi-column quantified subquery
 	CExpression *PexprScalarSubqueryQuantified(
 		Edxlopid edxlopid, IMdIdArray *scalar_op_mdids,
 		const CWStringConst *str, ULongPtrArray *colids,

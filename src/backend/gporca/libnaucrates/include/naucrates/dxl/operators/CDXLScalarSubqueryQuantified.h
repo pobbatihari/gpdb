@@ -48,8 +48,8 @@ private:
 	// id of the scalar comparison operator
 	IMDId *m_scalar_op_mdid;
 
-	// id of the scalar comparison operator
-	IMdIdArray *m_scalar_op_mdids;
+	// mdids of the scalar comparison operators
+	IMdIdArray *m_scalar_op_mdids{nullptr};
 
 	// name of scalar comparison operator
 	CMDName *m_scalar_op_mdname;
@@ -57,14 +57,11 @@ private:
 	// colid produced by the relational child of the AnySubquery operator
 	ULONG m_colid;
 
-	// colids produced by the relational child of the non-scalar Subquery operator
+	// colids produced by the relational child of the Subquery operator
 	ULongPtrArray *m_colids;
 
-	// non-scalar boolop type
+	// multi-column scalar subquery testexpr boolop type
 	EdxlBoolExprType m_testexprBoolopType;
-
-	// is non-scalar subquery
-	BOOL m_isNonScalarSubq = false;
 
 public:
 	CDXLScalarSubqueryQuantified(CDXLScalarSubqueryQuantified &) = delete;
@@ -73,16 +70,12 @@ public:
 	CDXLScalarSubqueryQuantified(CMemoryPool *mp, IMDId *scalar_op_mdid,
 								 CMDName *mdname, ULONG colid);
 
-	// ctor
+	// ctor for multi-column scalar subquery(BOOLEXPR)
 	CDXLScalarSubqueryQuantified(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 								 CMDName *mdname, ULongPtrArray *colids,
 								 EdxlBoolExprType testexpr_booloptype);
 
-	// ctor for Non-SCalar subquery (BOOLEXPR)
 	~CDXLScalarSubqueryQuantified() override;
-
-	// serialize the array of output arg types into a comma-separated string
-	CWStringDynamic *GetMdIdOpArrayStr() const;
 
 	// scalar operator id
 	IMDId *
@@ -91,7 +84,7 @@ public:
 		return m_scalar_op_mdid;
 	}
 
-	// non-scalar operator id's
+	// operator mdids
 	IMdIdArray *
 	GetScalarOpMdIds() const
 	{
@@ -126,11 +119,11 @@ public:
 		return m_testexprBoolopType;
 	}
 
-	// is subquery non-scalar
+	// is multi-column scalar subquery
 	BOOL
-	IsNonScalarSubq() const
+	FMultipleColumns() const
 	{
-		return m_isNonScalarSubq;
+		return (nullptr != m_scalar_op_mdids && m_scalar_op_mdids->Size() > 1);
 	}
 
 	// serialize operator in DXL format

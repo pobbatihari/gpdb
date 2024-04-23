@@ -1733,6 +1733,34 @@ CDXLUtils::SerializeToCommaSeparatedString(CMemoryPool *mp,
 	return dxl_string;
 }
 
+// Serialize a list of mdids into a comma-separated string
+CWStringDynamic *
+CDXLUtils::SerializeToCommaSeparatedString(CMemoryPool *mp,
+										   IMdIdArray *mdids_ptr_array)
+{
+	GPOS_ASSERT(nullptr != mdids_ptr_array);
+	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
+
+	const ULONG len = mdids_ptr_array->Size();
+	for (ULONG ul = 0; ul < len; ul++)
+	{
+		IMDId *mdid = (*mdids_ptr_array)[ul];
+		if (ul == len - 1)
+		{
+			// last element: do not print a comma
+			dxl_string->AppendFormat(GPOS_WSZ_LIT("%ls"), mdid->GetBuffer());
+		}
+		else
+		{
+			dxl_string->AppendFormat(
+				GPOS_WSZ_LIT("%ls%ls"), mdid->GetBuffer(),
+				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
+		}
+	}
+
+	return dxl_string;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CDXLUtils::CreateMultiByteCharStringFromWCString

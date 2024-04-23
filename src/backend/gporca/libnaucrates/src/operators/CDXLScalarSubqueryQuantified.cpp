@@ -58,7 +58,6 @@ CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
 	  m_colids(colids),
 	  m_testexprBoolopType(testexpr_booloptype)
 {
-	m_isNonScalarSubq = true;
 	GPOS_ASSERT(nullptr != scalar_op_mdids);
 	GPOS_ASSERT(nullptr != scalar_op_mdname);
 	GPOS_ASSERT(nullptr != m_colids);
@@ -74,7 +73,7 @@ CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
 //---------------------------------------------------------------------------
 CDXLScalarSubqueryQuantified::~CDXLScalarSubqueryQuantified()
 {
-	if (IsNonScalarSubq())
+	if (FMultipleColumns())
 	{
 		m_colids->Release();
 		m_scalar_op_mdids->Release();
@@ -86,40 +85,6 @@ CDXLScalarSubqueryQuantified::~CDXLScalarSubqueryQuantified()
 	GPOS_DELETE(m_scalar_op_mdname);
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLScalarSubqueryQuantified::GetMdIdOpArrayStr
-//
-//	@doc:
-//		Serialize the array of MdIds into a comma-separated string
-//
-//---------------------------------------------------------------------------
-CWStringDynamic *
-CDXLScalarSubqueryQuantified::GetMdIdOpArrayStr() const
-{
-	GPOS_ASSERT(nullptr != m_scalar_op_mdids);
-	CWStringDynamic *str = GPOS_NEW(m_mp) CWStringDynamic(m_mp);
-
-	const ULONG len = m_scalar_op_mdids->Size();
-	for (ULONG ul = 0; ul < len; ul++)
-	{
-		IMDId *mdid = (*m_scalar_op_mdids)[ul];
-		if (ul == len - 1)
-		{
-			// last element: do not print a comma
-			str->AppendFormat(GPOS_WSZ_LIT("%ls"), mdid->GetBuffer());
-		}
-		else
-		{
-			str->AppendFormat(
-				GPOS_WSZ_LIT("%ls%ls"), mdid->GetBuffer(),
-				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
-		}
-	}
-
-	return str;
-}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -141,15 +106,17 @@ CDXLScalarSubqueryQuantified::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOpName),
 								 m_scalar_op_mdname->GetMDName());
 
-	if (IsNonScalarSubq())
+	if (FMultipleColumns())
 	{
 		xml_serializer->AddAttribute(
-			CDXLTokens::GetDXLTokenStr(EdxltokenIsNonScalarSubquery),
-			IsNonScalarSubq());
-		CWStringDynamic *output_arg_type_array_str = GetMdIdOpArrayStr();
+			CDXLTokens::GetDXLTokenStr(EdxltokenMultiColumnScalarSubquery),
+			FMultipleColumns());
+		CWStringDynamic *mdids =
+			CDXLUtils::SerializeToCommaSeparatedString(m_mp, m_scalar_op_mdids);
+		;
 		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOpNos),
-									 output_arg_type_array_str);
-		GPOS_DELETE(output_arg_type_array_str);
+									 mdids);
+		GPOS_DELETE(mdids);
 
 		CWStringDynamic *colids = CDXLUtils::Serialize(m_mp, m_colids);
 		GPOS_ASSERT(nullptr != colids);

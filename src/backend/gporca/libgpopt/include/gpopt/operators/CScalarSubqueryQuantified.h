@@ -47,7 +47,7 @@ private:
 	IMDId *m_scalar_op_mdid;
 
 	// mdids of comparison operators
-	IMdIdArray *m_scalar_op_mdids;
+	IMdIdArray *m_scalar_op_mdids{nullptr};
 
 	// name of comparison operator
 	const CWStringConst *m_pstrScalarOp;
@@ -58,10 +58,7 @@ private:
 	// column references used in comparison
 	CColRefArray *m_colref_array;
 
-	// is subquery non-scalar
-	BOOL m_isNonscalarSubq = false;
-
-	// non-scalary subquery testexpr boolop type
+	// scalary subquery testexpr boolop type
 	CScalarBoolOp::EBoolOperator m_testexprBoolopType =
 		CScalarBoolOp::EboolopSentinel;
 
@@ -71,7 +68,7 @@ protected:
 							  const CWStringConst *pstrScalarOp,
 							  const CColRef *colref);
 
-	// ctor of non-scalar subquery (BOOLEXPR)
+	// ctor of multi-column subquery(BOOLEXPR)
 	CScalarSubqueryQuantified(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 							  const CWStringConst *pstrScalarOp,
 							  CColRefArray *colref_array,
@@ -103,14 +100,17 @@ public:
 		return m_colref_array;
 	}
 
-	// is subquery non-scalar
+	// is multi-column scalar subquery
+	// Example query:
+	//   select * from foo where (a, b) IN (select c, d from bar);
+
 	BOOL
-	IsNonScalarSubq() const
+	FMultipleColumns() const
 	{
-		return m_isNonscalarSubq;
+		return (nullptr != m_scalar_op_mdids && m_scalar_op_mdids->Size() > 1);
 	}
 
-	// get non-scalar subquery testexpr boolop type
+	// return subquery testexpr boolop type
 	CScalarBoolOp::EBoolOperator
 	GetBoolOptype() const
 	{

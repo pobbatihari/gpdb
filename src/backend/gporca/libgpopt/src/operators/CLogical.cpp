@@ -563,8 +563,8 @@ CLogical::PkcDeriveKeysPassThru(CExpressionHandle &exprhdl, ULONG ulChild)
 	// If the project list contains SRFs, interrupt the derivation of
 	// Keys collection. Otherwise, the parent operator may end up with
 	// duplicate tuples.
-	// exp query: select * from foo where (a, a) in (select a,
-	// generate_series(1, 10)/2 g from foo group by a);
+	// example query: select * from foo where (a, a) IN (select a,
+	//              generate_series(1, 10)/2 g from foo group by a);
 	if (COperator::EopLogicalProject == exprhdl.Pop()->Eopid())
 	{
 		// Here child index 1 corresponds to the project list
