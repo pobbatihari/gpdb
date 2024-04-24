@@ -28,35 +28,51 @@ set optimizer_trace_fallback to on;
 ----------------------------------------------------
 
 -- Two columns composite key
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t1_subq.b from t2_subq);
-explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
-select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq) AND t1_subq.b=1;
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.b, t1_subq.c from t2_subq) AND t1_subq.b=1;
 explain (costs off)  select * from t1_subq where (a, b) IN (select (item).a, (item).b from composite_table);
 select * from t1_subq where (a, b) IN (select (item).a, (item).b from composite_table);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select a, b from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select a, b from t3_subq);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t1_subq.a from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t1_subq.a from t3_subq);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t3_subq.a from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t3_subq.a from t3_subq);
+    -- subquery in value context
+explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
+select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b) IN (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
 explain (costs off)  select ((a, b) IN (select (item).a, (item).b from composite_table)) from t1_subq;
 select ((a, b) IN (select (item).a, (item).b from composite_table)) from t1_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) IN (select a, b from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) IN (select a, b from t3_subq) from t1_subq, t2_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t1_subq.a from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t1_subq.a from t3_subq) from t1_subq, t2_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t3_subq.a from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t3_subq.a from t3_subq) from t1_subq, t2_subq;
 
 -- Three columns composite key
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
-explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq) AND t1_subq.b=1;
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq) AND t1_subq.b=1;
+    -- subquery in value context
+explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
@@ -64,12 +80,14 @@ explain (costs off) select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq
 select ((t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
 
 -- Adding const to projection column
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+    -- subquery in value context
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
@@ -78,12 +96,14 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t2_su
 select ((t1_subq.a, t1_subq.b) IN (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
 
 -- Adding two columns
+   -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
 select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ANY(select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
@@ -92,20 +112,24 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t2_su
 select  ((t1_subq.a, t1_subq.b) = ANY(select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
 
 -- Nested subquery
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+    -- subquery in value context
 explain (costs off) select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
 select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
 explain (costs off) select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
 select (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
 
 -- Set returning function in projection
+   -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10));
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10));
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
 select  ((t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
 
@@ -114,6 +138,7 @@ select  ((t1_subq.a, t1_subq.b) IN (select generate_series(1, 10), generate_seri
 -----------------------------------------------------
 
 -- Two columns composite key
+   -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a, t2_subq.b from t2_subq);
@@ -122,6 +147,13 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (se
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_subq.b from t2_subq);
 explain (costs off)  select * from t1_subq where (a, b) = ALL (select (item).a, (item).b from composite_table);
 select * from t1_subq where (a, b) = ALL (select (item).a, (item).b from composite_table);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) = ALL (select a, b from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) = ALL (select a, b from t3_subq);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t1_subq.a from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t1_subq.a from t3_subq);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t3_subq.a from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t3_subq.a from t3_subq);
+    -- subquery in value context
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
@@ -130,14 +162,22 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_s
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select ((a, b) = ALL (select (item).a, (item).b from composite_table)) from t1_subq;
 select ((a, b) = ALL (select (item).a, (item).b from composite_table)) from t1_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) = ALL (select a, b from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) = ALL (select a, b from t3_subq) from t1_subq, t2_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t1_subq.a from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t1_subq.a from t3_subq) from t1_subq, t2_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t3_subq.a from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) = ALL (select t2_subq.a, t3_subq.a from t3_subq) from t1_subq, t2_subq;
 
 -- Three columns composite key
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
@@ -146,12 +186,14 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) = ALL (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
 
 -- Adding const to projection column
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.c+1, t1_subq.c+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.c+1, t1_subq.c+1 from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t2_subq.c+1, t2_subq.c+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t2_subq.c+1, t2_subq.c+1 from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.a+1, t2_subq.b+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL(select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+    -- subquery in value context
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
@@ -160,12 +202,14 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t2
 select ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
 
 -- Adding two columns
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
 select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
@@ -174,20 +218,24 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_s
 select  ((t1_subq.a, t1_subq.b) = ALL (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
 
 -- Nested subquery
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+    -- subquery in value context
 explain (costs off) select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
 select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
 explain (costs off) select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
 select (t1_subq.a, t1_subq.b) = ALL (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
 
 -- Set returning function in projection
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10));
 select * from t1_subq where (t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10));
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
 select  ((t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
 
@@ -196,6 +244,7 @@ select  ((t1_subq.a, t1_subq.b) = ALL (select generate_series(1, 10), generate_s
 --------------------------------------------------------
 
 -- Two columns composite key
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_subq.b from t2_subq);
@@ -204,6 +253,13 @@ explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (s
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq);
 explain (costs off)  select * from t1_subq where (a, b) != any(select (item).a, (item).b from composite_table);
 select * from t1_subq where (a, b) != any(select (item).a, (item).b from composite_table);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select a, b from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select a, b from t3_subq);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t1_subq.a from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t1_subq.a from t3_subq);
+explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t3_subq.a from t3_subq);
+select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t3_subq.a from t3_subq);
+    -- subquery in value context
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_subq.b from t2_subq)) from t1_subq;
@@ -212,14 +268,22 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq)) from t1_subq;
 explain (costs off)  select ((a, b) != ANY (select (item).a, (item).b from composite_table)) from t1_subq;
 select ((a, b) != ANY (select (item).a, (item).b from composite_table)) from t1_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) != ANY (select a, b from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) != ANY (select a, b from t3_subq) from t1_subq, t2_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t1_subq.a from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t1_subq.a from t3_subq) from t1_subq, t2_subq;
+explain (costs off) select (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t3_subq.a from t3_subq) from t1_subq, t2_subq;
+select (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t3_subq.a from t3_subq) from t1_subq, t2_subq;
 
 -- Three columns composite key
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_subq.a, t2_subq.b, t2_subq.c from t2_subq)) from t1_subq;
@@ -228,12 +292,14 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1
 select  ((t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq)) from t1_subq;
 
 -- Adding const to projection column
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
+    -- subquery in value context
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t1_subq.c+1 from t2_subq)) from t1_subq;
 explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
@@ -242,12 +308,14 @@ explain (costs off) select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t
 select ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.c+1, t2_subq.c+1 from t2_subq)) from t1_subq;
 
 -- Adding two columns
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq);
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
 select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t1_subq.a, t1_subq.b+t1_subq.b from t2_subq)) from t1_subq;
 explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_subq.a, t2_subq.b+t2_subq.b from t2_subq)) from t1_subq;
@@ -256,20 +324,24 @@ explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_
 select  ((t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq)) from t1_subq;
 
 -- Nested subquery
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a,t1_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq));
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
+    -- subquery in value context
 explain (costs off) select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
 select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t3_subq.b from t3_subq)) from t1_subq;
 explain (costs off) select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
 select (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq)) from t1_subq;
 
 -- Set returning function in projection
+    -- subquery in filter context
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10));
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10));
+    -- subquery in value context
 explain (costs off) select  ((t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
 select  ((t1_subq.a, t1_subq.b) != ANY (select generate_series(1, 10), generate_series(1, 10))) from t1_subq;
 

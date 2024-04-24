@@ -113,7 +113,6 @@ CDXLScalarSubqueryQuantified::SerializeToDXL(CXMLSerializer *xml_serializer,
 			FMultipleColumns());
 		CWStringDynamic *mdids =
 			CDXLUtils::SerializeToCommaSeparatedString(m_mp, m_scalar_op_mdids);
-		;
 		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOpNos),
 									 mdids);
 		GPOS_DELETE(mdids);
