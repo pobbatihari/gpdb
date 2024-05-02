@@ -205,7 +205,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAll OperatorName="=" MultiColumnScalarSubquery="true" OperatorMdids="0.96.1.0,0.96.1.0" ColIds="11,12" SubqueryTestExprBoolOpType="0">
+        <dxl:SubqueryAll OperatorName="=" OperatorMdids="0.96.1.0,0.96.1.0" ColIds="11,12" SubqueryTestExprBoolOpType="0">
           <dxl:ValuesList>
             <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>

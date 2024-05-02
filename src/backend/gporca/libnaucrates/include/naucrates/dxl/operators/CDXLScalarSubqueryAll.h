@@ -41,10 +41,6 @@ public:
 	CDXLScalarSubqueryAll(CDXLScalarSubqueryAll &) = delete;
 
 	// ctor
-	CDXLScalarSubqueryAll(CMemoryPool *mp, IMDId *scalar_op_mdid,
-						  CMDName *mdname, ULONG colid);
-
-	// ctor for multi-column scalar subquery(BOOLEXPR)
 	CDXLScalarSubqueryAll(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 						  CMDName *mdname, ULongPtrArray *colids,
 						  EdxlBoolExprType testexpr_booloptype);

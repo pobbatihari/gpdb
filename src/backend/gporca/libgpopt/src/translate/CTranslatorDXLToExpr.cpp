@@ -2505,55 +2505,6 @@ CTranslatorDXLToExpr::PexprLogicalConstTableGet(const CDXLNode *pdxlnConstTable)
 //---------------------------------------------------------------------------
 CExpression *
 CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
-	Edxlopid edxlopid, IMDId *scalar_op_mdid, const CWStringConst *str,
-	ULONG colid, CDXLNode *pdxlnLogicalChild, CDXLNode *pdxlnScalarChild)
-{
-	GPOS_ASSERT(EdxlopScalarSubqueryAny == edxlopid ||
-				EdxlopScalarSubqueryAll == edxlopid);
-	GPOS_ASSERT(nullptr != str);
-	GPOS_ASSERT(nullptr != pdxlnLogicalChild);
-	GPOS_ASSERT(nullptr != pdxlnScalarChild);
-
-	// translate children
-
-	CExpression *pexprLogicalChild = Pexpr(pdxlnLogicalChild);
-	CExpression *pexprScalarChild = Pexpr(pdxlnScalarChild);
-
-	// get colref for subquery colid
-	const CColRef *colref = LookupColRef(m_phmulcr, colid);
-
-	CScalar *popScalarSubquery = nullptr;
-	if (EdxlopScalarSubqueryAny == edxlopid)
-	{
-		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryAny(
-			m_mp, scalar_op_mdid,
-			GPOS_NEW(m_mp) CWStringConst(m_mp, str->GetBuffer()), colref);
-	}
-	else
-	{
-		popScalarSubquery = GPOS_NEW(m_mp) CScalarSubqueryAll(
-			m_mp, scalar_op_mdid,
-			GPOS_NEW(m_mp) CWStringConst(m_mp, str->GetBuffer()), colref);
-	}
-
-	// create a scalar subquery any expression with the relational expression as
-	// first child and the scalar expression as second child
-	CExpression *pexpr = GPOS_NEW(m_mp) CExpression(
-		m_mp, popScalarSubquery, pexprLogicalChild, pexprScalarChild);
-
-	return pexpr;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToExpr::PexprScalarSubqueryQuantified
-//
-//	@doc:
-// 		Helper for creating multi-column quantified scalar subquery
-//
-//---------------------------------------------------------------------------
-CExpression *
-CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 	Edxlopid edxlopid, IMdIdArray *scalar_op_mdids, const CWStringConst *str,
 	ULongPtrArray *colids, CScalarBoolOp::EBoolOperator testexprbooloptype,
 	CDXLNode *pdxlnLogicalChild, CDXLNode *pdxlnScalarChild)
@@ -2625,29 +2576,15 @@ CTranslatorDXLToExpr::PexprScalarSubqueryQuantified(
 		CDXLScalarSubqueryQuantified::Cast(pdxlnSubquery->GetOperator());
 	GPOS_ASSERT(nullptr != pdxlopSubqueryQuantified);
 
-	if (pdxlopSubqueryQuantified->FMultipleColumns())
-	{
-		IMdIdArray *mdids = pdxlopSubqueryQuantified->GetScalarOpMdIds();
-		mdids->AddRef();
-		CScalarBoolOp::EBoolOperator testexprbooltype =
-			CTranslatorDXLToExprUtils::EBoolOperator(
-				pdxlopSubqueryQuantified->GetBoolOpType());
-		return PexprScalarSubqueryQuantified(
-			dxl_op->GetDXLOperator(), mdids,
-			pdxlopSubqueryQuantified->GetScalarOpMdName()->GetMDName(),
-			pdxlopSubqueryQuantified->GetColIds(), testexprbooltype,
-			(*pdxlnSubquery)
-				[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexRelational],
-			(*pdxlnSubquery)
-				[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexScalar]);
-	}
-
-	IMDId *mdid = pdxlopSubqueryQuantified->GetScalarOpMdId();
-	mdid->AddRef();
+	IMdIdArray *mdids = pdxlopSubqueryQuantified->GetScalarOpMdIds();
+	mdids->AddRef();
+	CScalarBoolOp::EBoolOperator testexprbooltype =
+		CTranslatorDXLToExprUtils::EBoolOperator(
+			pdxlopSubqueryQuantified->GetBoolOpType());
 	return PexprScalarSubqueryQuantified(
-		dxl_op->GetDXLOperator(), mdid,
+		dxl_op->GetDXLOperator(), mdids,
 		pdxlopSubqueryQuantified->GetScalarOpMdName()->GetMDName(),
-		pdxlopSubqueryQuantified->GetColId(),
+		pdxlopSubqueryQuantified->GetColIds(), testexprbooltype,
 		(*pdxlnSubquery)
 			[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexRelational],
 		(*pdxlnSubquery)
@@ -2798,62 +2735,38 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 								   ? EdxlopScalarSubqueryAll
 								   : EdxlopScalarSubqueryAny;
 
+		// This section is reached only when dealing with a NOT IN
+		// scalar subquery.
+		CScalarBoolOp::EBoolOperator testexpr_booltype =
+			CScalarBoolOp::EboolopSentinel;
+		CWStringConst str_neq(GPOS_WSZ_LIT("<>"));
 		if (pdxlopSubqueryQuantified->FMultipleColumns())
 		{
-			// This section is reached only when dealing with a NOT
-			// IN(ANY) scalar subquery.
-			CWStringConst str_neq(GPOS_WSZ_LIT("<>"));
-			CScalarBoolOp::EBoolOperator testexpr_booltype =
-				CScalarBoolOp::EboolopOr;
-
-			IMdIdArray *mdids_array = GPOS_NEW(m_mp) IMdIdArray(m_mp);
-			IMdIdArray *mdids = pdxlopSubqueryQuantified->GetScalarOpMdIds();
-
-			for (ULONG ul = 0; ul < mdids->Size(); ul++)
-			{
-				IMDId *mdid_op = (*mdids)[ul];
-				IMDId *pmdidInverseOp =
-					m_pmda->RetrieveScOp(mdid_op)->GetInverseOpMdid();
-				pmdidInverseOp->AddRef();
-				mdids_array->Append(pmdidInverseOp);
-			}
-
-			// if inverse operator cannot be found in metadata, the
-			// optimizer won't collapse NOT node
-			if (nullptr == mdids_array)
-			{
-				return nullptr;
-			}
-
-			return PexprScalarSubqueryQuantified(
-				edxlopidNew, mdids_array, &str_neq,
-				pdxlopSubqueryQuantified->GetColIds(), testexpr_booltype,
-				(*pdxlnNotChild)[CDXLScalarSubqueryQuantified::
-									 EdxlsqquantifiedIndexRelational],
-				(*pdxlnNotChild)[CDXLScalarSubqueryQuantified::
-									 EdxlsqquantifiedIndexScalar]);
+			testexpr_booltype = CScalarBoolOp::EboolopOr;
 		}
 
-		// get mdid and name of the inverse of the comparison operator
-		// used by quantified subquery
-		IMDId *mdid_op = pdxlopSubqueryQuantified->GetScalarOpMdId();
-		IMDId *pmdidInverseOp =
-			m_pmda->RetrieveScOp(mdid_op)->GetInverseOpMdid();
+		IMdIdArray *mdids_array = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+		IMdIdArray *mdids = pdxlopSubqueryQuantified->GetScalarOpMdIds();
+
+		for (ULONG ul = 0; ul < mdids->Size(); ul++)
+		{
+			IMDId *mdid_op = (*mdids)[ul];
+			IMDId *pmdidInverseOp =
+				m_pmda->RetrieveScOp(mdid_op)->GetInverseOpMdid();
+			pmdidInverseOp->AddRef();
+			mdids_array->Append(pmdidInverseOp);
+		}
 
 		// if inverse operator cannot be found in metadata, the
 		// optimizer won't collapse NOT node
-		if (nullptr == pmdidInverseOp)
+		if (nullptr == mdids_array)
 		{
 			return nullptr;
 		}
 
-		const CWStringConst *pstrInverseOp =
-			m_pmda->RetrieveScOp(pmdidInverseOp)->Mdname().GetMDName();
-
-		pmdidInverseOp->AddRef();
 		return PexprScalarSubqueryQuantified(
-			edxlopidNew, pmdidInverseOp, pstrInverseOp,
-			pdxlopSubqueryQuantified->GetColId(),
+			edxlopidNew, mdids_array, &str_neq,
+			pdxlopSubqueryQuantified->GetColIds(), testexpr_booltype,
 			(*pdxlnNotChild)
 				[CDXLScalarSubqueryQuantified::EdxlsqquantifiedIndexRelational],
 			(*pdxlnNotChild)

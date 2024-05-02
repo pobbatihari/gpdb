@@ -30,26 +30,6 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
-	CMemoryPool *mp, IMDId *scalar_op_mdid, CMDName *scalar_op_mdname,
-	ULONG colid)
-	: CDXLScalar(mp),
-	  m_scalar_op_mdid(scalar_op_mdid),
-	  m_scalar_op_mdname(scalar_op_mdname),
-	  m_colid(colid)
-{
-	GPOS_ASSERT(scalar_op_mdid->IsValid());
-	GPOS_ASSERT(nullptr != scalar_op_mdname);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified
-//
-//	@doc:
-//		Constructor
-//
-//---------------------------------------------------------------------------
-CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
 	CMemoryPool *mp, IMdIdArray *scalar_op_mdids, CMDName *scalar_op_mdname,
 	ULongPtrArray *colids, EdxlBoolExprType testexpr_booloptype)
 	: CDXLScalar(mp),
@@ -60,7 +40,7 @@ CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
 {
 	GPOS_ASSERT(nullptr != scalar_op_mdids);
 	GPOS_ASSERT(nullptr != scalar_op_mdname);
-	GPOS_ASSERT(nullptr != m_colids);
+	GPOS_ASSERT(nullptr != colids);
 }
 
 //---------------------------------------------------------------------------
@@ -73,15 +53,8 @@ CDXLScalarSubqueryQuantified::CDXLScalarSubqueryQuantified(
 //---------------------------------------------------------------------------
 CDXLScalarSubqueryQuantified::~CDXLScalarSubqueryQuantified()
 {
-	if (FMultipleColumns())
-	{
-		m_colids->Release();
-		m_scalar_op_mdids->Release();
-	}
-	else
-	{
-		m_scalar_op_mdid->Release();
-	}
+	m_colids->Release();
+	m_scalar_op_mdids->Release();
 	GPOS_DELETE(m_scalar_op_mdname);
 }
 
@@ -105,35 +78,21 @@ CDXLScalarSubqueryQuantified::SerializeToDXL(CXMLSerializer *xml_serializer,
 	// serialize operator id and name
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOpName),
 								 m_scalar_op_mdname->GetMDName());
+	CWStringDynamic *mdids =
+		CDXLUtils::SerializeToCommaSeparatedString(m_mp, m_scalar_op_mdids);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOpNos),
+								 mdids);
+	GPOS_DELETE(mdids);
 
-	if (FMultipleColumns())
-	{
-		xml_serializer->AddAttribute(
-			CDXLTokens::GetDXLTokenStr(EdxltokenMultiColumnScalarSubquery),
-			FMultipleColumns());
-		CWStringDynamic *mdids =
-			CDXLUtils::SerializeToCommaSeparatedString(m_mp, m_scalar_op_mdids);
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenOpNos),
-									 mdids);
-		GPOS_DELETE(mdids);
+	CWStringDynamic *colids = CDXLUtils::Serialize(m_mp, m_colids);
+	GPOS_ASSERT(nullptr != colids);
+	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColIds),
+								 colids);
+	GPOS_DELETE(colids);
 
-		CWStringDynamic *colids = CDXLUtils::Serialize(m_mp, m_colids);
-		GPOS_ASSERT(nullptr != colids);
-		xml_serializer->AddAttribute(
-			CDXLTokens::GetDXLTokenStr(EdxltokenColIds), colids);
-		GPOS_DELETE(colids);
-
-		xml_serializer->AddAttribute(
-			CDXLTokens::GetDXLTokenStr(EdxltokenSubqueryTestExprBoolOpType),
-			GetBoolOpType());
-	}
-	else
-	{
-		m_scalar_op_mdid->Serialize(xml_serializer,
-									CDXLTokens::GetDXLTokenStr(EdxltokenOpNo));
-		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenColId),
-									 m_colid);
-	}
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenSubqueryTestExprBoolOpType),
+		GetBoolOpType());
 
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
 	xml_serializer->CloseElement(

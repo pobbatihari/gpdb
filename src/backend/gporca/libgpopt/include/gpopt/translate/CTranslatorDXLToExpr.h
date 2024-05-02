@@ -108,11 +108,6 @@ private:
 
 	// helper for creating quantified subquery
 	CExpression *PexprScalarSubqueryQuantified(
-		Edxlopid edxlopid, IMDId *scalar_op_mdid, const CWStringConst *str,
-		ULONG colid, CDXLNode *pdxlnLogicalChild, CDXLNode *pdxlnScalarChild);
-
-	// helper for creating multi-column quantified subquery
-	CExpression *PexprScalarSubqueryQuantified(
 		Edxlopid edxlopid, IMdIdArray *scalar_op_mdids,
 		const CWStringConst *str, ULongPtrArray *colids,
 		CScalarBoolOp::EBoolOperator testexpr_booloptype,
