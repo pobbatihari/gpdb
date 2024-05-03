@@ -414,7 +414,7 @@
             <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
               <dxl:If TypeMdid="0.23.1.0">
-                <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
+                <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="10" SubqueryTestExprBoolOpType="3">
                   <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
                   <dxl:LogicalSelect>
                     <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
@@ -452,7 +452,7 @@
               <dxl:ValuesList ParamType="aggargs">
               <dxl:If TypeMdid="0.23.1.0">
                 <dxl:Not>
-                  <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="20">
+                  <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="20" SubqueryTestExprBoolOpType="3">
                     <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
                     <dxl:LogicalSelect>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">

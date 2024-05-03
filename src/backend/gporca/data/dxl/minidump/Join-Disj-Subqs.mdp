@@ -809,7 +809,7 @@ OR
             <dxl:Ident ColId="44" ColName="oid" TypeMdid="0.26.1.0"/>
           </dxl:Comparison>
           <dxl:Or>
-            <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.93.1.0" ColId="89">
+            <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.93.1.0" ColIds="89" SubqueryTestExprBoolOpType="3">
               <dxl:Ident ColId="1" ColName="rolname" TypeMdid="0.19.1.0"/>
               <dxl:LogicalProject>
                 <dxl:ProjList>
@@ -860,7 +860,7 @@ OR
                 </dxl:LogicalSelect>
               </dxl:LogicalProject>
             </dxl:SubqueryAny>
-            <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.93.1.0" ColId="115">
+            <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.93.1.0" ColIds="115" SubqueryTestExprBoolOpType="3">
               <dxl:Ident ColId="26" ColName="rolname" TypeMdid="0.19.1.0"/>
               <dxl:LogicalProject>
                 <dxl:ProjList>

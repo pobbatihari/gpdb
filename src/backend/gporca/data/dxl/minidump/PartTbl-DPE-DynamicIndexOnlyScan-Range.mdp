@@ -839,7 +839,7 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:And>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="12">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="12" SubqueryTestExprBoolOpType="3">
             <dxl:Ident ColId="3" ColName="ptid" TypeMdid="0.23.1.0"/>
             <dxl:LogicalSelect>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">

@@ -248,7 +248,7 @@ CExpressionPreprocessor::PexprSimplifyQuantifiedSubqueries(CMemoryPool *mp,
 			CExpression *pexprScalar = (*pexpr)[1];
 			CScalarSubqueryQuantified *popSubqQuantified =
 				CScalarSubqueryQuantified::PopConvert(pexpr->Pop());
-			const CColRef *colref = popSubqQuantified->Pcr();
+			const CColRef *colref = (*popSubqQuantified->Pcrs())[0];
 			pexprInner->AddRef();
 			CExpression *pexprSubquery = GPOS_NEW(mp) CExpression(
 				mp,
@@ -258,7 +258,7 @@ CExpressionPreprocessor::PexprSimplifyQuantifiedSubqueries(CMemoryPool *mp,
 				pexprInner);
 
 			CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-			IMDId *mdid = popSubqQuantified->MdIdOp();
+			IMDId *mdid = (*(popSubqQuantified->MdIdOps()))[0];
 			const CWStringConst *str =
 				md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
 			mdid->AddRef();
@@ -2740,8 +2740,10 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 	CExpression *pexprRight = nullptr;
 	CExpression *pexprSubqOfExists = nullptr;
 
-	// will be utilized to reference column references within the inner child of the subquery
-	CColRefArray *colref_array = nullptr;
+	// will be utilized to reference column references within the inner child
+	// of the subquery
+	CColRefArray *colref_array = subqAny->Pcrs();
+	IMdIdArray *mdids = subqAny->MdIdOps();
 
 	CExpressionArray *pexprScalarChilds = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -2749,11 +2751,6 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 	{
 		if (subqAny->FMultipleColumns())
 		{
-			IMdIdArray *mdids = subqAny->MdIdOps();
-			// Column references of the inner child of multi-column
-			// scalar subquery
-			colref_array = subqAny->Pcrs();
-
 			// project element list
 			CExpression *pexprPrjEl = (*pexprRelational)[1];
 			for (ULONG ulCol = 0; ulCol < colref_array->Size(); ulCol++)
@@ -2790,7 +2787,7 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 		}
 		else
 		{
-			IMDId *mdid = subqAny->MdIdOp();
+			IMDId *mdid = (*mdids)[0];
 			const CWStringConst *str =
 				md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
 			// Create a scalar operation by taking the first
@@ -2809,18 +2806,14 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 	}
 	else
 	{
-		IMdIdArray *mdids = subqAny->MdIdOps();
+//		IMdIdArray *mdids = subqAny->MdIdOps();
 
 		if (subqAny->FMultipleColumns())
 		{
-			// Column references of the inner child of multi-column
-			// scalar subquery
-			colref_array = subqAny->Pcrs();
-
 			// create scalar comparisons using columns references
 			// of inner child and outer child of the multi-column
 			// scalar subquery
-			for (ULONG ulCol = 0; ulCol < pexprLeft->Arity(); ulCol++)
+			for (ULONG ulCol = 0; ulCol < colref_array->Size(); ulCol++)
 			{
 				IMDId *mdid = (*mdids)[ulCol];
 				CExpression *pexprLeftChild = (*pexprLeft)[ulCol];
@@ -2834,13 +2827,13 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 		}
 		else
 		{
-			IMDId *mdid = subqAny->MdIdOp();
+			IMDId *mdid = (*mdids)[0];
 			const CWStringConst *str =
 				md_accessor->RetrieveScOp(mdid)->Mdname().GetMDName();
 			pexprLeft->AddRef();
 			mdid->AddRef();
 			CExpression *scalarop = CUtils::PexprScalarCmp(
-				mp, pexprLeft, CUtils::PexprScalarIdent(mp, subqAny->Pcr()),
+				mp, pexprLeft, CUtils::PexprScalarIdent(mp, (*colref_array)[0]),
 				*str, mdid);
 			pexprScalarChilds->Append(scalarop);
 		}
@@ -2950,8 +2943,8 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 			// of the columns from relational child
 			CColRefSet *pcrsRelationalChild =
 				pexprLogicalChild->DeriveOutputColumns();
-			if (subqAny->FMultipleColumns())
-			{
+//			if (subqAny->FMultipleColumns())
+//			{
 				CColRefArray *pcrsSubquery =
 					CScalarSubqueryAny::PopConvert(pop)->Pcrs();
 				CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, pcrsSubquery);
@@ -2961,17 +2954,17 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 					return pexprNew;
 				}
 				pcrs->Release();
-			}
-			else
-			{
-				const CColRef *pcrSubquery =
-					CScalarSubqueryAny::PopConvert(pop)->Pcr();
-
-				if (pcrsRelationalChild->FMember(pcrSubquery))
-				{
-					return pexprNew;
-				}
-			}
+//			}
+//			else
+//			{
+//				const CColRef *pcrSubquery =
+//					CScalarSubqueryAny::PopConvert(pop)->Pcr();
+//
+//				if (pcrsRelationalChild->FMember(pcrSubquery))
+//				{
+//					return pexprNew;
+//				}
+//			}
 		}
 
 		CExpression *pexprNewConverted = ConvertInToSimpleExists(mp, pexprNew);

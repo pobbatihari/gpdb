@@ -33,7 +33,7 @@
 #include "unittest/gpopt/CTestUtils.h"
 
 
-const CHAR *szMDFileName = "../data/dxl/metadata/md.xml";
+const CHAR *szMDFileName = "/Users/hmaddileti/workspace/gpdb/src/backend/gporca/data/dxl/metadata/md.xml";
 
 //---------------------------------------------------------------------------
 //	@function:

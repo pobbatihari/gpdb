@@ -43,20 +43,14 @@ class CExpressionHandle;
 class CScalarSubqueryQuantified : public CScalar
 {
 private:
-	// id of comparison operator
-	IMDId *m_scalar_op_mdid;
-
 	// mdids of comparison operators
-	IMdIdArray *m_scalar_op_mdids{nullptr};
+	IMdIdArray *m_scalar_op_mdids;
 
 	// name of comparison operator
 	const CWStringConst *m_pstrScalarOp;
 
-	// column reference used in comparison
-	const CColRef *m_pcr;
-
 	// column references used in comparison
-	CColRefArray *m_colref_array;
+	CColRefArray *m_pcrs;
 
 	// scalary subquery testexpr boolop type
 	CScalarBoolOp::EBoolOperator m_testexprBoolopType =
@@ -64,11 +58,6 @@ private:
 
 protected:
 	// ctor
-	CScalarSubqueryQuantified(CMemoryPool *mp, IMDId *scalar_op_mdid,
-							  const CWStringConst *pstrScalarOp,
-							  const CColRef *colref);
-
-	// ctor of multi-column subquery(BOOLEXPR)
 	CScalarSubqueryQuantified(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 							  const CWStringConst *pstrScalarOp,
 							  CColRefArray *colref_array,
@@ -80,30 +69,22 @@ protected:
 public:
 	CScalarSubqueryQuantified(const CScalarSubqueryQuantified &) = delete;
 
-	// operator mdid accessor
-	IMDId *MdIdOp() const;
+//	// operator mdid accessor
+//	IMDId *MdIdOp() const;
 
 	// operator name accessor
 	const CWStringConst *PstrOp() const;
 
 	// column reference accessor
-	const CColRef *
-	Pcr() const
-	{
-		return m_pcr;
-	}
-
-	// column reference accessor
 	CColRefArray *
 	Pcrs()
 	{
-		return m_colref_array;
+		return m_pcrs;
 	}
 
 	// is multi-column scalar subquery
 	// Example query:
 	//   select * from foo where (a, b) IN (select c, d from bar);
-
 	BOOL
 	FMultipleColumns() const
 	{

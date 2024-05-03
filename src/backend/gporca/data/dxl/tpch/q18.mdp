@@ -2649,7 +2649,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:And>
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="55">
+              <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="55" SubqueryTestExprBoolOpType="3">
                 <dxl:Ident ColId="16" ColName="o_orderkey" TypeMdid="0.23.1.0"/>
                 <dxl:LogicalSelect>
                   <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1756.1.0">

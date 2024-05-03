@@ -28,22 +28,6 @@ using namespace gpmd;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CDXLScalarSubqueryAny::CDXLScalarSubqueryAny(CMemoryPool *mp,
-											 IMDId *scalar_op_mdid,
-											 CMDName *scalar_op_mdname,
-											 ULONG colid)
-	: CDXLScalarSubqueryQuantified(mp, scalar_op_mdid, scalar_op_mdname, colid)
-{
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLScalarSubqueryAny::CDXLScalarSubqueryAny
-//
-//	@doc:
-//		Constructor
-//
-//---------------------------------------------------------------------------
 CDXLScalarSubqueryAny::CDXLScalarSubqueryAny(
 	CMemoryPool *mp, IMdIdArray *scalar_op_mdids, CMDName *scalar_op_mdname,
 	ULongPtrArray *colids, EdxlBoolExprType testexpr_booloptype)

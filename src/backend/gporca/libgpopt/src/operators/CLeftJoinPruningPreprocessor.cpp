@@ -390,7 +390,7 @@ CLeftJoinPruningPreprocessor::PexprJoinPruningScalarSubquery(
 			subquery_colrefset->Release();
 			return pexprScalar;
 		}
-		subquery_colref = subquery_pop->Pcr();
+		subquery_colref = (*(subquery_pop->Pcrs()))[0];
 	}
 
 	// If we have a subquery inside CScalarCmp then subquery_colref will be null

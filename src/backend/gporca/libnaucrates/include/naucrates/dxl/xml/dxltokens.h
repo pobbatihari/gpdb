@@ -209,7 +209,6 @@ enum Edxltoken
 	EdxltokenScalarSubqueryAny,
 	EdxltokenScalarSubqueryExists,
 	EdxltokenScalarSubqueryNotExists,
-	EdxltokenMultiColumnScalarSubquery,
 	EdxltokenSubqueryTestExprBoolOpType,
 
 	EdxltokenScalarDMLAction,

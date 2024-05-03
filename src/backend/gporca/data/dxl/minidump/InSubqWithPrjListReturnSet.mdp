@@ -166,7 +166,7 @@ Result
       <dxl:LogicalProject>
         <dxl:ProjList>
           <dxl:ProjElem ColId="5" Alias="x">
-            <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="4">
+            <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="4" SubqueryTestExprBoolOpType="3">
               <dxl:Ident ColId="2" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:LogicalProject>
                 <dxl:ProjList>

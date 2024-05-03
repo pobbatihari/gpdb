@@ -2320,7 +2320,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
+        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="10" SubqueryTestExprBoolOpType="3">
           <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
           <dxl:LogicalJoin JoinType="Left">
             <dxl:LogicalJoin JoinType="Inner">
