@@ -241,7 +241,7 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="11">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="11" SubqueryTestExprBoolOpType="3">
             <dxl:Ident ColId="1" ColName="t1" TypeMdid="0.23.1.0"/>
             <dxl:LogicalGet>
               <dxl:TableDescriptor Mdid="6.53023.1.1" TableName="s">

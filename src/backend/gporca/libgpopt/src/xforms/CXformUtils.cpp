@@ -844,6 +844,10 @@ CXformUtils::SubqueryAnyToAgg(
 	GPOS_ASSERT(nullptr != ppexprNewScalar);
 
 	CExpression *pexprInner = (*pexprSubquery)[0];
+	CScalarSubqueryQuantified *quantSubq =
+		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
+	CColRefArray *subqPcrs = quantSubq->Pcrs();
+	GPOS_ASSERT(subqPcrs->Size() == 1);
 
 	// build subquery quantified comparison
 	CExpression *pexprResult = nullptr;
@@ -855,8 +859,7 @@ CXformUtils::SubqueryAnyToAgg(
 
 	GPOS_ASSERT(nullptr != scalarCmp);
 
-	const CColRef *pcrSubq =
-		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop())->Pcr();
+	const CColRef *pcrSubq = (*subqPcrs)[0];
 	BOOL fCanEvaluateToNull =
 		(CUtils::FUsesNullableCol(mp, pexprSubqPred, pexprResult) ||
 		 !CPredicateUtils::FBuiltInComparisonIsVeryStrict(scalarCmp->MdIdOp()));
@@ -1002,6 +1005,10 @@ CXformUtils::SubqueryAllToAgg(
 	CExpression *pexprInner = (*pexprSubquery)[0];
 	CExpression *pexprScalarOuter = (*pexprSubquery)[1];
 	CExpression *pexprSubqPred = PexprInversePred(mp, pexprSubquery);
+	CScalarSubqueryQuantified *quantSubq =
+		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
+	CColRefArray *subqPcrs = quantSubq->Pcrs();
+	GPOS_ASSERT(subqPcrs->Size() == 1);
 
 	// generate subquery test expression
 	const IMDTypeInt4 *pmdtypeint4 = md_accessor->PtMDType<IMDTypeInt4>();
@@ -1016,8 +1023,7 @@ CXformUtils::SubqueryAllToAgg(
 	pdrgpexpr->Append(pexprSubqTest);
 
 	// generate null indicator for inner expression
-	const CColRef *pcrSubq =
-		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop())->Pcr();
+	const CColRef *pcrSubq = (*subqPcrs)[0];
 	CExpression *pexprInnerNullIndicator =
 		PexprNullIndicator(mp, CUtils::PexprScalarIdent(mp, pcrSubq));
 	pdrgpexpr->Append(pexprInnerNullIndicator);
@@ -1239,11 +1245,13 @@ CXformUtils::PexprInversePred(CMemoryPool *mp, CExpression *pexprSubquery)
 	CExpression *pexprScalar = (*pexprSubquery)[1];
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
+	CColRefArray *colref_array = popSqAll->Pcrs();
+	IMdIdArray *mdids = popSqAll->MdIdOps();
+
+	GPOS_ASSERT(mdids->Size() > 0);
+	GPOS_ASSERT(colref_array->Size() > 0);
 	if (popSqAll->FMultipleColumns())
 	{
-		IMdIdArray *mdids = popSqAll->MdIdOps();
-
-		CColRefArray *colref_array = popSqAll->Pcrs();
 		const CWStringConst *pstrop = popSqAll->PstrOp();
 
 		// Traverse the scalarValueList (pexprNewScalar) and produce scalar
@@ -1274,16 +1282,15 @@ CXformUtils::PexprInversePred(CMemoryPool *mp, CExpression *pexprSubquery)
 		return CUtils::PexprScalarBoolOp(mp, CScalarBoolOp::EboolopAnd,
 										 pscalarchilds);
 	}
-
-	IMDId *mdid_op = popSqAll->MdIdOp();
+	IMDId *mdid_op = (*mdids)[0];
 	IMDId *pmdidInverseOp =
 		md_accessor->RetrieveScOp(mdid_op)->GetInverseOpMdid();
 	const CWStringConst *pstrFirst =
 		md_accessor->RetrieveScOp(pmdidInverseOp)->Mdname().GetMDName();
 	pexprScalar->AddRef();
 	pmdidInverseOp->AddRef();
-	return CUtils::PexprScalarCmp(mp, pexprScalar, popSqAll->Pcr(), *pstrFirst,
-								  pmdidInverseOp);
+	return CUtils::PexprScalarCmp(mp, pexprScalar, (*colref_array)[0],
+								  *pstrFirst, pmdidInverseOp);
 }
 
 

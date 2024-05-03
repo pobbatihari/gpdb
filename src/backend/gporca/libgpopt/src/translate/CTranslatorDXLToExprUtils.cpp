@@ -204,11 +204,14 @@ CTranslatorDXLToExprUtils::EBoolOperator(EdxlBoolExprType edxlbooltype)
 		case Edxlor:
 			eboolop = CScalarBoolOp::EboolopOr;
 			break;
+		case EdxlBoolExprTypeSentinel:
+			eboolop = CScalarBoolOp::EboolopSentinel;
+			break;
 		default:
 			GPOS_ASSERT(!"Unrecognized boolean expression type");
 	}
 
-	GPOS_ASSERT(CScalarBoolOp::EboolopSentinel > eboolop);
+	GPOS_ASSERT(CScalarBoolOp::EboolopSentinel >= eboolop);
 
 	return eboolop;
 }

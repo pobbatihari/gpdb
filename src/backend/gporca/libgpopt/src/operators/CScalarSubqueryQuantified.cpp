@@ -34,38 +34,16 @@ using namespace gpmd;
 //
 //---------------------------------------------------------------------------
 CScalarSubqueryQuantified::CScalarSubqueryQuantified(
-	CMemoryPool *mp, IMDId *scalar_op_mdid, const CWStringConst *pstrScalarOp,
-	const CColRef *colref)
-	: CScalar(mp),
-	  m_scalar_op_mdid(scalar_op_mdid),
-	  m_pstrScalarOp(pstrScalarOp),
-	  m_pcr(colref)
-{
-	GPOS_ASSERT(scalar_op_mdid->IsValid());
-	GPOS_ASSERT(nullptr != pstrScalarOp);
-	GPOS_ASSERT(nullptr != colref);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CScalarSubqueryQuantified::CScalarSubqueryQuantified
-//
-//	@doc:
-//		Ctor
-//
-//---------------------------------------------------------------------------
-CScalarSubqueryQuantified::CScalarSubqueryQuantified(
 	CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 	const CWStringConst *pstrScalarOp, CColRefArray *colref_array,
 	CScalarBoolOp::EBoolOperator testexpr_booloptype)
 	: CScalar(mp),
 	  m_scalar_op_mdids(scalar_op_mdids),
 	  m_pstrScalarOp(pstrScalarOp),
-	  m_colref_array(colref_array),
+	  m_pcrs(colref_array),
 	  m_testexprBoolopType(testexpr_booloptype)
 
 {
-	m_scalar_op_mdid = (*scalar_op_mdids)[0];
 	GPOS_ASSERT(nullptr != scalar_op_mdids);
 	GPOS_ASSERT(nullptr != pstrScalarOp);
 	GPOS_ASSERT(nullptr != colref_array);
@@ -81,16 +59,9 @@ CScalarSubqueryQuantified::CScalarSubqueryQuantified(
 //---------------------------------------------------------------------------
 CScalarSubqueryQuantified::~CScalarSubqueryQuantified()
 {
+	m_scalar_op_mdids->Release();
+	m_pcrs->Release();
 	GPOS_DELETE(m_pstrScalarOp);
-	if (FMultipleColumns())
-	{
-		m_scalar_op_mdids->Release();
-		m_colref_array->Release();
-	}
-	else
-	{
-		m_scalar_op_mdid->Release();
-	}
 }
 
 //---------------------------------------------------------------------------
@@ -109,20 +80,6 @@ CScalarSubqueryQuantified::PstrOp() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CScalarSubqueryQuantified::MdIdOp
-//
-//	@doc:
-//		Scalar operator metadata id
-//
-//---------------------------------------------------------------------------
-IMDId *
-CScalarSubqueryQuantified::MdIdOp() const
-{
-	return m_scalar_op_mdid;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CScalarSubqueryQuantified::MdidType
 //
 //	@doc:
@@ -134,7 +91,7 @@ CScalarSubqueryQuantified::MdidType() const
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	IMDId *mdid_type =
-		md_accessor->RetrieveScOp(m_scalar_op_mdid)->GetResultTypeMdid();
+		md_accessor->RetrieveScOp((*m_scalar_op_mdids)[0])->GetResultTypeMdid();
 
 	GPOS_ASSERT(
 		md_accessor->PtMDType<IMDTypeBool>()->MDId()->Equals(mdid_type));
@@ -155,11 +112,8 @@ CScalarSubqueryQuantified::HashValue() const
 {
 	return gpos::CombineHashes(
 		COperator::HashValue(),
-		FMultipleColumns()
-			? gpos::CombineHashes(gpos::HashPtr<IMdIdArray>(m_scalar_op_mdids),
-								  gpos::HashPtr<CColRefArray>(m_colref_array))
-			: gpos::CombineHashes(m_scalar_op_mdid->HashValue(),
-								  gpos::HashPtr<CColRef>(m_pcr)));
+		gpos::CombineHashes(gpos::HashPtr<IMdIdArray>(m_scalar_op_mdids),
+							gpos::HashPtr<CColRefArray>(m_pcrs)));
 }
 
 
@@ -183,10 +137,8 @@ CScalarSubqueryQuantified::Matches(COperator *pop) const
 	CScalarSubqueryQuantified *popSsq =
 		CScalarSubqueryQuantified::PopConvert(pop);
 
-	return FMultipleColumns() ? popSsq->Pcrs()->Equals(m_colref_array) &&
-									popSsq->MdIdOps()->Equals(m_scalar_op_mdids)
-							  : popSsq->Pcr() == m_pcr &&
-									popSsq->MdIdOp()->Equals(m_scalar_op_mdid);
+	return popSsq->Pcrs()->Equals(m_pcrs) &&
+		   popSsq->MdIdOps()->Equals(m_scalar_op_mdids);
 }
 
 
@@ -207,26 +159,14 @@ CScalarSubqueryQuantified::PcrsUsed(CMemoryPool *mp, CExpressionHandle &exprhdl)
 	CColRefSet *pcrsChildOutput =
 		exprhdl.DeriveOutputColumns(0 /* child_index */);
 
-	if (FMultipleColumns())
+	CColRefArray *colref_array = Pcrs();
+	for (ULONG ulCol = 0; ulCol < colref_array->Size(); ulCol++)
 	{
-		CColRefArray *colref_array = Pcrs();
-		for (ULONG ulCol = 0; ulCol < colref_array->Size(); ulCol++)
+		if (!pcrsChildOutput->FMember((*colref_array)[ulCol]))
 		{
-			if (!pcrsChildOutput->FMember((*colref_array)[ulCol]))
-			{
-				// subquery column is not produced by
-				// relational child, add it to used columns
-				pcrs->Include((*colref_array)[ulCol]);
-			}
-		}
-	}
-	else
-	{
-		if (!pcrsChildOutput->FMember(m_pcr))
-		{
-			// subquery column is not produced by relational child,
-			// add it to used columns
-			pcrs->Include(m_pcr);
+			// subquery column is not produced by
+			// relational child, add it to used columns
+			pcrs->Include((*colref_array)[ulCol]);
 		}
 	}
 	return pcrs;
@@ -266,21 +206,16 @@ CScalarSubqueryQuantified::OsPrint(IOstream &os) const
 	os << SzId();
 	os << "(" << PstrOp()->GetBuffer() << ")";
 	os << "[";
-	if (FMultipleColumns())
+
+	for (ULONG col = 0; col < m_pcrs->Size(); col++)
 	{
-		for (ULONG col = 0; col < m_colref_array->Size(); col++)
+		((*m_pcrs)[col])->OsPrint(os);
+		if (col < m_pcrs->Size() - 1)
 		{
-			((*m_colref_array)[col])->OsPrint(os);
-			if (col < m_colref_array->Size() - 1)
-			{
-				os << ", ";
-			}
+			os << ", ";
 		}
 	}
-	else
-	{
-		m_pcr->OsPrint(os);
-	}
+
 	os << "]";
 
 	return os;

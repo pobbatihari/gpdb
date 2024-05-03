@@ -119,7 +119,7 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalSelect>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="6">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="6" SubqueryTestExprBoolOpType="3">
             <dxl:Ident ColId="2" ColName="field_1" TypeMdid="0.23.1.0"/>
             <dxl:UnionAll InputColumns="6;10" CastAcrossInputs="false">
               <dxl:Columns>
@@ -215,7 +215,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="15157680">
+                                                                                              <dxl:Plan Id="0" SpaceSize="15157680">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.001099" Rows="1.000000" Width="8"/>

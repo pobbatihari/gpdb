@@ -1368,6 +1368,9 @@
       <dxl:Commutator Mdid="0.1694.1.0"/>
       <dxl:InverseOp Mdid="0.58.1.0"/>
     </dxl:GPDBScalarOp>
+    <dxl:GPDBFunc Mdid="0.144.1.0" Name="int4ne" ReturnsSet="false" Stability="Immutable" IsStrict="true">
+      <dxl:ResultType Mdid="0.16.1.0"/>
+    </dxl:GPDBFunc>
     <dxl:GPDBScalarOp Mdid="0.594.1.0" Name="*" ComparisonType="Other" ReturnsNullOnNullInput="true">
       <dxl:LeftType Mdid="0.701.1.0"/>
       <dxl:RightType Mdid="0.701.1.0"/>

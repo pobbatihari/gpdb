@@ -5247,7 +5247,7 @@
                       <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAC1FUUl8zXyU=" LintValue="124560366"/>
                     </dxl:Comparison>
                   </dxl:Or>
-                  <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="50">
+                  <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="50" SubqueryTestExprBoolOpType="3">
                     <dxl:Ident ColId="35" ColName="month_number" TypeMdid="0.23.1.0"/>
                     <dxl:Union InputColumns="50;56" CastAcrossInputs="false">
                       <dxl:Columns>

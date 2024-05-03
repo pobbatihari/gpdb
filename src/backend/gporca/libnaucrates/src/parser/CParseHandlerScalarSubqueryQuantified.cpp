@@ -79,69 +79,33 @@ CParseHandlerScalarSubqueryQuantified::StartElement(
 		CMDName *md_op_name = GPOS_NEW(m_mp) CMDName(m_mp, op_name_str);
 		GPOS_DELETE(op_name_str);
 
-		BOOL isMultiColumnScalarSubq =
-			CDXLOperatorFactory::ExtractConvertAttrValueToBool(
-				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenMultiColumnScalarSubquery, dxl_token,
-				true,  // is optional
-				false  // default value
-			);
+		// parse operator ids
+		const XMLCh *xmlszTypes = CDXLOperatorFactory::ExtractAttrValue(
+			attrs, EdxltokenOpNos, dxl_token);
 
-		if (isMultiColumnScalarSubq)
+		IMdIdArray *mdids = CDXLOperatorFactory::ExtractConvertMdIdsToArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszTypes,
+			EdxltokenOpNos, dxl_token);
+
+		// parse column ids
+		ULongPtrArray *colids =
+			CDXLOperatorFactory::ExtractConvertValuesToArray(
+				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+				EdxltokenColIds, dxl_token);
+
+		INT TypeIndex = CDXLOperatorFactory::ExtractConvertAttrValueToInt(
+			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+			EdxltokenSubqueryTestExprBoolOpType, dxl_token);
+
+		if (EdxltokenScalarSubqueryAny == dxl_token)
 		{
-			// parse operator ids
-			const XMLCh *xmlszTypes = CDXLOperatorFactory::ExtractAttrValue(
-				attrs, EdxltokenOpNos, dxl_token);
-
-			IMdIdArray *mdids = CDXLOperatorFactory::ExtractConvertMdIdsToArray(
-				m_parse_handler_mgr->GetDXLMemoryManager(), xmlszTypes,
-				EdxltokenOpNos, dxl_token);
-
-			// parse column ids
-			ULongPtrArray *colids =
-				CDXLOperatorFactory::ExtractConvertValuesToArray(
-					m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-					EdxltokenColIds, dxl_token);
-
-			INT TypeIndex = CDXLOperatorFactory::ExtractConvertAttrValueToInt(
-				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenSubqueryTestExprBoolOpType, dxl_token);
-
-			if (EdxltokenScalarSubqueryAny == dxl_token)
-			{
-				m_dxl_op = GPOS_NEW(m_mp)
-					CDXLScalarSubqueryAny(m_mp, mdids, md_op_name, colids,
-										  (EdxlBoolExprType) TypeIndex);
-			}
-			else
-			{
-				m_dxl_op = GPOS_NEW(m_mp)
-					CDXLScalarSubqueryAll(m_mp, mdids, md_op_name, colids,
-										  (EdxlBoolExprType) TypeIndex);
-			}
+			m_dxl_op = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(
+				m_mp, mdids, md_op_name, colids, (EdxlBoolExprType) TypeIndex);
 		}
 		else
 		{
-			// parse column id
-			ULONG colid = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenColId, dxl_token);
-
-			// parse operator id
-			IMDId *mdid_op = CDXLOperatorFactory::ExtractConvertAttrValueToMdId(
-				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenOpNo, dxl_token);
-
-			if (EdxltokenScalarSubqueryAny == dxl_token)
-			{
-				m_dxl_op = GPOS_NEW(m_mp)
-					CDXLScalarSubqueryAny(m_mp, mdid_op, md_op_name, colid);
-			}
-			else
-			{
-				m_dxl_op = GPOS_NEW(m_mp)
-					CDXLScalarSubqueryAll(m_mp, mdid_op, md_op_name, colid);
-			}
+			m_dxl_op = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(
+				m_mp, mdids, md_op_name, colids, (EdxlBoolExprType) TypeIndex);
 		}
 	}
 	else if (0 == XMLString::compareString(

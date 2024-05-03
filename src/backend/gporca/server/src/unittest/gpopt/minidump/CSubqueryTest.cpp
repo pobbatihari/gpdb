@@ -87,8 +87,6 @@ const CHAR *rgszSubqueryFileNames[] = {
 	"../data/dxl/minidump/MultiColumn-AllSubq2.mdp",
 	"../data/dxl/minidump/MultiColumn-NotInSubq1.mdp",
 	"../data/dxl/minidump/MultiColumn-NotInSubq2.mdp",
-
-
 };
 
 

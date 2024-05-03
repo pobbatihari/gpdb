@@ -532,7 +532,7 @@ select * from t1 where 10 not in (select a from t2 where t2.b<>t1.b group by t2.
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="10">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="10" SubqueryTestExprBoolOpType="3">
             <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             <dxl:LogicalGroupBy>
               <dxl:GroupingColumns>

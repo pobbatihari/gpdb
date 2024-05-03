@@ -45,17 +45,11 @@ public:
 	};
 
 private:
-	// id of the scalar comparison operator
-	IMDId *m_scalar_op_mdid;
-
 	// mdids of the scalar comparison operators
-	IMdIdArray *m_scalar_op_mdids{nullptr};
+	IMdIdArray *m_scalar_op_mdids;
 
 	// name of scalar comparison operator
 	CMDName *m_scalar_op_mdname;
-
-	// colid produced by the relational child of the AnySubquery operator
-	ULONG m_colid;
 
 	// colids produced by the relational child of the Subquery operator
 	ULongPtrArray *m_colids;
@@ -67,22 +61,11 @@ public:
 	CDXLScalarSubqueryQuantified(CDXLScalarSubqueryQuantified &) = delete;
 
 	// ctor
-	CDXLScalarSubqueryQuantified(CMemoryPool *mp, IMDId *scalar_op_mdid,
-								 CMDName *mdname, ULONG colid);
-
-	// ctor for multi-column scalar subquery(BOOLEXPR)
 	CDXLScalarSubqueryQuantified(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 								 CMDName *mdname, ULongPtrArray *colids,
 								 EdxlBoolExprType testexpr_booloptype);
 
 	~CDXLScalarSubqueryQuantified() override;
-
-	// scalar operator id
-	IMDId *
-	GetScalarOpMdId() const
-	{
-		return m_scalar_op_mdid;
-	}
 
 	// operator mdids
 	IMdIdArray *
@@ -96,13 +79,6 @@ public:
 	GetScalarOpMdName() const
 	{
 		return m_scalar_op_mdname;
-	}
-
-	// subquery colid
-	ULONG
-	GetColId() const
-	{
-		return m_colid;
 	}
 
 	// subquery colids

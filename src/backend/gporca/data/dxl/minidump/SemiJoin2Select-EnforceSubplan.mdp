@@ -241,7 +241,7 @@ explain select * from x where x.i in (select x.y from y);
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="2">
+        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="2" SubqueryTestExprBoolOpType="3">
           <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
           <dxl:LogicalGet>
             <dxl:TableDescriptor Mdid="6.40972.1.1" TableName="y">

@@ -35,11 +35,6 @@ public:
 	CScalarSubqueryAny(const CScalarSubqueryAny &) = delete;
 
 	// ctor
-	CScalarSubqueryAny(CMemoryPool *mp, IMDId *scalar_op_mdid,
-					   const CWStringConst *pstrScalarOp,
-					   const CColRef *colref);
-
-	// ctor for multi-column scalar subquery(BOOLEXPR)
 	CScalarSubqueryAny(CMemoryPool *mp, IMdIdArray *scalar_op_mdids,
 					   const CWStringConst *pstrScalarOp,
 					   CColRefArray *colref_array,

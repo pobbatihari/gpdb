@@ -160,7 +160,7 @@
       <dxl:LogicalProject>
         <dxl:ProjList>
           <dxl:ProjElem ColId="4" Alias="?column?">
-            <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="3">
+            <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="3" SubqueryTestExprBoolOpType="3">
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
               <dxl:LogicalProject>
                 <dxl:ProjList>

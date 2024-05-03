@@ -300,7 +300,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.15.1.0" ColId="47">
+        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.15.1.0" ColIds="47" SubqueryTestExprBoolOpType="3">
           <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:LogicalGroupBy>
             <dxl:GroupingColumns/>
@@ -320,7 +320,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalSelect>
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="46">
+              <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="46" SubqueryTestExprBoolOpType="3">
                 <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:LogicalProject>
                   <dxl:ProjList>

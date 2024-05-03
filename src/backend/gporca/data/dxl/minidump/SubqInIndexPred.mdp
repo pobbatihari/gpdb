@@ -402,7 +402,7 @@ ON a = c
       <dxl:LogicalProject>
         <dxl:ProjList>
           <dxl:ProjElem ColId="31" Alias="g">
-            <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="23">
+            <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="23" SubqueryTestExprBoolOpType="3">
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="42"/>
               <dxl:LogicalGet>
                 <dxl:TableDescriptor Mdid="6.305414.1.0" TableName="primo" LockMode="1">

@@ -1982,14 +1982,8 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 		colids->Append(GPOS_NEW(m_mp) ULONG(dxl_colref->Id()));
 	}
 
-	// mdid of scalar subquery
-	IMDId *mdid = nullptr;
-
-	// operator name of suqbuery
-	const CWStringConst *str = nullptr;
-
-	// mdids of multi-column scalar subquery
-	IMdIdArray *mdids = nullptr;
+	// mdids of scalar subquery
+	IMdIdArray *mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 
 	// booltype of subquery testexpr
 	EdxlBoolExprType testexpr_booltype = EdxlBoolExprTypeSentinel;
@@ -1997,14 +1991,15 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 	// outer dxlnode
 	CDXLNode *outer_dxlnode = nullptr;
 
+	const CWStringConst *str =
+		GPOS_NEW(m_mp) CWStringConst(m_mp, strVal(llast(sublink->operName)));
+
 	if (IsA(sublink->testexpr, BoolExpr))
 	{
 		// If the sublink testexpr type is BoolExpr, considering it as
 		// multi-column scalar subquery.  because a BoolExpr typically
 		// involves conditions that expect multiple values rather than
 		// just a single value.
-
-		mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 
 		// output columns of 'testexpr' are stored within outer_dxlnode
 		// of type 'scalarvalueslist'.
@@ -2015,11 +2010,6 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 		const BoolExpr *bool_expr = (BoolExpr *) sublink->testexpr;
 		testexpr_booltype = EdxlbooltypeFromGPDBBoolType(bool_expr->boolop);
 		ListCell *lc;
-
-		// operator name
-		const char *chstr = strVal(llast(sublink->operName));
-		str = GPOS_NEW(m_mp) CWStringConst(m_mp, chstr);
-
 		foreach (lc, bool_expr->args)
 		{
 			Expr *child_expr = (Expr *) lfirst(lc);
@@ -2046,10 +2036,8 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 	else if (IsA(sublink->testexpr, OpExpr))
 	{
 		OpExpr *op_expr = (OpExpr *) sublink->testexpr;
-		mdid = GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral, op_expr->opno);
-
-		// get operator name
-		str = GetDXLArrayCmpType(mdid);
+		mdids->Append(GPOS_NEW(m_mp)
+						  CMDIdGPDB(IMDId::EmdidGeneral, op_expr->opno));
 
 		// translate left hand side of the expression
 		GPOS_ASSERT(nullptr != op_expr->args);
@@ -2070,35 +2058,17 @@ CTranslatorScalarToDXL::CreateQuantifiedSubqueryFromSublink(
 				ANY_SUBLINK == sublink->subLinkType);
 	if (ALL_SUBLINK == sublink->subLinkType)
 	{
-		if (mdids != nullptr && mdids->Size() > 1)
-		{
-			subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(
-				m_mp, mdids, GPOS_NEW(m_mp) CMDName(m_mp, str), colids,
-				testexpr_booltype);
-			GPOS_DELETE(str);
-		}
-		else
-		{
-			subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(
-				m_mp, mdid, GPOS_NEW(m_mp) CMDName(m_mp, str), *((*colids)[0]));
-			colids->Release();
-		}
+		subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(
+			m_mp, mdids, GPOS_NEW(m_mp) CMDName(m_mp, str), colids,
+			testexpr_booltype);
+		GPOS_DELETE(str);
 	}
 	else
 	{
-		if (mdids != nullptr && mdids->Size() > 1)
-		{
-			subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(
-				m_mp, mdids, GPOS_NEW(m_mp) CMDName(m_mp, str), colids,
-				testexpr_booltype);
-			GPOS_DELETE(str);
-		}
-		else
-		{
-			subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(
-				m_mp, mdid, GPOS_NEW(m_mp) CMDName(m_mp, str), *((*colids)[0]));
-			colids->Release();
-		}
+		subquery = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(
+			m_mp, mdids, GPOS_NEW(m_mp) CMDName(m_mp, str), colids,
+			testexpr_booltype);
+		GPOS_DELETE(str);
 	}
 
 	dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, subquery);

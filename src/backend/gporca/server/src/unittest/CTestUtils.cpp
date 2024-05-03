@@ -961,7 +961,12 @@ CTestUtils::PexprLogicalSubqueryWithConstTableGet(CMemoryPool *mp,
 
 	// get random columns from inner expression
 	CColRefSet *pcrs = pexprConstTableGet->DeriveOutputColumns();
-	const CColRef *pcrInner = pcrs->PcrAny();
+
+	CColRefArray *colref_array = GPOS_NEW(mp) CColRefArray(mp);
+	colref_array->Append(pcrs->PcrAny());
+
+	IMdIdArray *mdids = GPOS_NEW(mp) IMdIdArray(mp);
+	mdids->Append(GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP));
 
 	// get random columns from outer expression
 	pcrs = pexprOuter->DeriveOutputColumns();
@@ -975,10 +980,8 @@ CTestUtils::PexprLogicalSubqueryWithConstTableGet(CMemoryPool *mp,
 		// construct ANY subquery expression
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp) CScalarSubqueryAny(
-				mp,
-				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
-				str, pcrInner),
+			GPOS_NEW(mp) CScalarSubqueryAny(mp, mdids, str, colref_array,
+											CScalarBoolOp::EboolopSentinel),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 	else
@@ -986,10 +989,8 @@ CTestUtils::PexprLogicalSubqueryWithConstTableGet(CMemoryPool *mp,
 		// construct ALL subquery expression
 		pexprSubquery = GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp) CScalarSubqueryAll(
-				mp,
-				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
-				str, pcrInner),
+			GPOS_NEW(mp) CScalarSubqueryAll(mp, mdids, str, colref_array,
+											CScalarBoolOp::EboolopSentinel),
 			pexprConstTableGet, CUtils::PexprScalarIdent(mp, pcrOuter));
 	}
 
@@ -4040,13 +4041,18 @@ CTestUtils::PexpSubqueryAll(CMemoryPool *mp, CExpression *pexprOuter)
 
 	CExpression *pexprInner = CTestUtils::PexprLogicalGet(mp);
 	CColRefSet *pcrsInner = pexprInner->DeriveOutputColumns();
-	const CColRef *pcrInner = pcrsInner->PcrAny();
+
+	CColRefArray *colref_array = GPOS_NEW(mp) CColRefArray(mp);
+	colref_array->Append(pcrsInner->PcrAny());
+
+	IMdIdArray *mdids = GPOS_NEW(mp) IMdIdArray(mp);
+	mdids->Append(GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP));
 
 	return GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAll(
-			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
-			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("=")), pcrInner),
+			mp, mdids, GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("=")),
+			colref_array, CScalarBoolOp::EboolopSentinel),
 		pexprInner, CUtils::PexprScalarIdent(mp, pcrOuter));
 }
 
@@ -4071,13 +4077,18 @@ CTestUtils::PexpSubqueryAny(CMemoryPool *mp, CExpression *pexprOuter)
 
 	CExpression *pexprInner = CTestUtils::PexprLogicalGet(mp);
 	CColRefSet *pcrsInner = pexprInner->DeriveOutputColumns();
-	const CColRef *pcrInner = pcrsInner->PcrAny();
+
+	CColRefArray *colref_array = GPOS_NEW(mp) CColRefArray(mp);
+	colref_array->Append(pcrsInner->PcrAny());
+
+	IMdIdArray *mdids = GPOS_NEW(mp) IMdIdArray(mp);
+	mdids->Append(GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP));
 
 	return GPOS_NEW(mp) CExpression(
 		mp,
 		GPOS_NEW(mp) CScalarSubqueryAny(
-			mp, GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP),
-			GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("=")), pcrInner),
+			mp, mdids, GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("=")),
+			colref_array, CScalarBoolOp::EboolopSentinel),
 		pexprInner, CUtils::PexprScalarIdent(mp, pcrOuter));
 }
 

@@ -260,7 +260,7 @@ select * from y where m in (select 1 union select n from x);
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="11">
+        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="11" SubqueryTestExprBoolOpType="3">
           <dxl:Ident ColId="1" ColName="m" TypeMdid="0.23.1.0"/>
           <dxl:Union InputColumns="11;2" CastAcrossInputs="false">
             <dxl:Columns>

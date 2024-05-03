@@ -1085,7 +1085,7 @@
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="case">
             <dxl:If TypeMdid="0.23.1.0">
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="9">
+              <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="9" SubqueryTestExprBoolOpType="3">
                 <dxl:Ident ColId="1" ColName="field1" TypeMdid="0.23.1.0"/>
                 <dxl:LogicalProject>
                   <dxl:ProjList>
@@ -1109,7 +1109,7 @@
           </dxl:ProjElem>
           <dxl:ProjElem ColId="13" Alias="case">
             <dxl:If TypeMdid="0.23.1.0">
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="12">
+              <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="12" SubqueryTestExprBoolOpType="3">
                 <dxl:Ident ColId="3" ColName="field3" TypeMdid="0.23.1.0"/>
                 <dxl:LogicalProject>
                   <dxl:ProjList>
@@ -1133,7 +1133,7 @@
           </dxl:ProjElem>
           <dxl:ProjElem ColId="16" Alias="case">
             <dxl:If TypeMdid="0.23.1.0">
-              <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="15">
+              <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="15" SubqueryTestExprBoolOpType="3">
                 <dxl:Ident ColId="4" ColName="field4" TypeMdid="0.23.1.0"/>
                 <dxl:LogicalProject>
                   <dxl:ProjList>
