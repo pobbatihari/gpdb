@@ -32,7 +32,7 @@ using namespace gpos;
 using namespace gpdxl;
 using namespace gpopt;
 
-const CHAR *CMDProviderTest::file_name = "/Users/hmaddileti/workspace/gpdb/src/backend/gporca/data/dxl/metadata/md.xml";
+const CHAR *CMDProviderTest::file_name = "../data/dxl/metadata/md.xml";
 
 //---------------------------------------------------------------------------
 //	@function:
