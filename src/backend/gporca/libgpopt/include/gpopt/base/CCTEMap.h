@@ -199,6 +199,13 @@ public:
 		return (m_phmcm->Size() == pcm->m_phmcm->Size()) && this->FSubset(pcm);
 	}
 
+	// size of cte map
+	ULONG
+	Size() const
+	{
+		return m_phmcm->Size();
+	}
+
 	// extract plan properties of the only producer in the map, if any
 	CDrvdPropPlan *PdpplanProducer(ULONG *ulpId) const;
 

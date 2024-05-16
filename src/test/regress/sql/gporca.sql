@@ -122,6 +122,11 @@ with x as (select * from orca.foo) select count(*) from (select * from x) y wher
 with x as (select * from orca.foo) select count(*)+1 from (select * from x) y where y.x1 <= (select count(*) from x);
 with x as (select * from orca.foo) select count(*) from (select * from x) y where y.x1 < (with z as (select * from x) select count(*) from z);
 
+-- expect a fallback without crash from below query
+create table test(a int, b int) distributed by (a);
+explain (costs off) with cte as (select '2024-01-01'::date start_dt, '2024-01-10'::date::date end_dt) select * from test, generate_series((select start_dt from cte), (select end_dt from cte),interval '1' day);
+
+
 -- outer references
 select count(*)+1 from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1 y where y.x1 = x.x2);
 select count(*)+1 from orca.foo x where x.x1 > (select count(*) from orca.bar1 y where y.x1 = x.x2);

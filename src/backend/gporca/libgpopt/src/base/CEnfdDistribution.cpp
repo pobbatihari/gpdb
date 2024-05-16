@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/base/CCTEMap.h"
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
@@ -150,6 +151,22 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		GPOS_ASSERT(NULL != ppimDrvd);
 		if (ppimDrvd->FContainsUnresolved() && !this->FCompatible(pds) &&
 			!ppimDrvd->FSubset(pppsReqd->Ppim()))
+		{
+			return CEnfdProp::EpetProhibited;
+		}
+
+		// Avoid using correlated joins(subplans) with
+		// CTE's(sharedscan). This is because during execution, if a
+		// subplan has no motion and the shared scan executes on
+		// different slices, the shareinput_mutator_xslice_2()
+		// incorrectly sets the share type, motion ID, and slice ID in
+		// the subplan, leading to disrupted cross-slice interaction. A
+		// permanent fix requires changes at the execution level,
+		// meanwhile discarding such plans to prevent unexpected
+		// behavior.
+		CCTEMap *cteMap = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->GetCostModel();
+		GPOS_ASSERT(NULL != cteMap);
+		if (CUtils::FCorrelatedNLJoin(exprhdl.Pop()) && cteMap->Size() > 0)
 		{
 			return CEnfdProp::EpetProhibited;
 		}
