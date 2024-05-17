@@ -2366,6 +2366,26 @@ with x as (select * from orca.foo) select count(*) from (select * from x) y wher
      9
 (1 row)
 
+-- expect a fallback without crash from below query
+create table test(a int, b int) distributed by (a);
+explain (costs off) with cte as (select '2024-01-01'::date start_dt, '2024-01-10'::date::date end_dt) select * from test, generate_series((select start_dt from cte), (select end_dt from cte),interval '1' day);
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         InitPlan 1 (returns $0)  (slice3)
+           ->  Subquery Scan on cte
+                 ->  Result
+         InitPlan 2 (returns $1)  (slice4)
+           ->  Subquery Scan on cte_1
+                 ->  Result
+         ->  Seq Scan on test
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1)
+                     ->  Function Scan on generate_series
+ Optimizer: Postgres query optimizer
+(13 rows)
+
 -- outer references
 select count(*)+1 from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1 y where y.x1 = x.x2);
  ?column? 
