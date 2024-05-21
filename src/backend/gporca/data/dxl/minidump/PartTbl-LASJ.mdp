@@ -809,7 +809,7 @@
         </dxl:ProjList>
         <dxl:LogicalSelect>
           <dxl:Not>
-            <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="11" SubqueryTestExprBoolOpType="3">
+            <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="11">
               <dxl:Ident ColId="3" ColName="k" TypeMdid="0.23.1.0"/>
               <dxl:LogicalGet>
                 <dxl:TableDescriptor Mdid="6.259490.1.1" TableName="foo2">

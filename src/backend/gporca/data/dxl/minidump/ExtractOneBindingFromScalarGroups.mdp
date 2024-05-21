@@ -343,7 +343,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalSelect>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="20" SubqueryTestExprBoolOpType="3">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="20">
             <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
             <dxl:Union InputColumns="20;29" CastAcrossInputs="false">
               <dxl:Columns>

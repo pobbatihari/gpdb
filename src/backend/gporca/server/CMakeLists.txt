@@ -426,7 +426,10 @@ CForeignPartTest:
 ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin ForeignPartOneTimeFilterDPE;
 
 CCardinalityTest:
-SystemColCtidStats SystemColSegIdStats
+SystemColCtidStats SystemColSegIdStats;
+
+CMultiColumnSubqueryTest:
+MultiColumn-AnySubq1 MultiColumn-AnySubq2 MultiColumn-AnySubq3 MultiColumn-AnySubq4 MultiColumn-AllSubq1 MultiColumn-AllSubq2 MultiColumn-NotInSubq1 MultiColumn-NotInSubq2
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

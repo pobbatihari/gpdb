@@ -90,6 +90,9 @@ IMDId *
 CScalarSubqueryQuantified::MdidType() const
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+	// assuming first OpExpr type is same as other OpExprs
+	GPOS_ASSERT(m_scalar_op_mdids->Size() > 0);
 	IMDId *mdid_type =
 		md_accessor->RetrieveScOp((*m_scalar_op_mdids)[0])->GetResultTypeMdid();
 
@@ -110,10 +113,20 @@ CScalarSubqueryQuantified::MdidType() const
 ULONG
 CScalarSubqueryQuantified::HashValue() const
 {
-	return gpos::CombineHashes(
-		COperator::HashValue(),
-		gpos::CombineHashes(gpos::HashPtr<IMdIdArray>(m_scalar_op_mdids),
-							gpos::HashPtr<CColRefArray>(m_pcrs)));
+	ULONG ulHash = 0;
+	for (ULONG ul = 0; ul < m_scalar_op_mdids->Size(); ul++)
+	{
+		ulHash = gpos::CombineHashes(ulHash,
+									 ((*m_scalar_op_mdids)[ul])->HashValue());
+	}
+
+	for (ULONG ul = 0; ul < m_pcrs->Size(); ul++)
+	{
+		ulHash =
+			gpos::CombineHashes(ulHash, gpos::HashPtr<CColRef>((*m_pcrs)[ul]));
+	}
+
+	return gpos::CombineHashes(COperator::HashValue(), ulHash);
 }
 
 

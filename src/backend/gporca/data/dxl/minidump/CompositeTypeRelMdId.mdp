@@ -287,7 +287,7 @@
         <dxl:LimitCount/>
         <dxl:LimitOffset/>
         <dxl:LogicalSelect>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="11" SubqueryTestExprBoolOpType="3">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="11">
             <dxl:Ident ColId="2" ColName="f2" TypeMdid="0.23.1.0"/>
             <dxl:LogicalSelect>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">

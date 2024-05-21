@@ -284,7 +284,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAll OperatorName="=" OperatorMdids="0.96.1.0" ColIds="9" SubqueryTestExprBoolOpType="3">
+        <dxl:SubqueryAll OperatorName="=" OperatorMdids="0.96.1.0" ColIds="9">
           <dxl:ScalarSubquery ColId="17">
             <dxl:LogicalLimit>
               <dxl:SortingColumnList/>

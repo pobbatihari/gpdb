@@ -352,7 +352,7 @@
                 <dxl:Ident ColId="11" ColName="j" TypeMdid="0.23.1.0"/>
                 <dxl:Ident ColId="20" ColName="j" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
-              <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="28" SubqueryTestExprBoolOpType="3">
+              <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="28">
                 <dxl:Ident ColId="19" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:LogicalSelect>
                   <dxl:And>

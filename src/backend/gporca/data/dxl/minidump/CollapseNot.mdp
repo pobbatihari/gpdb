@@ -254,7 +254,7 @@ SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
         </dxl:ProjList>
         <dxl:LogicalSelect>
           <dxl:Not>
-            <dxl:SubqueryAny OperatorName="&lt;&lt;=" OperatorMdids="0.932.1.0" ColIds="9" SubqueryTestExprBoolOpType="3">
+            <dxl:SubqueryAny OperatorName="&lt;&lt;=" OperatorMdids="0.932.1.0" ColIds="9">
               <dxl:Ident ColId="1" ColName="cidr" TypeMdid="0.869.1.0"/>
               <dxl:LogicalGet>
                 <dxl:TableDescriptor Mdid="6.660032.1.1" TableName="inverse">

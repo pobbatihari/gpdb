@@ -53,10 +53,11 @@ private:
 		const XMLCh *const element_qname		// element's qname
 		) override;
 
+
+public:
 	// parse the bool type from the Xerces xml string
 	static EdxlBoolExprType GetDxlBoolTypeStr(const XMLCh *xmlszBoolType);
 
-public:
 	CParseHandlerScalarBoolExpr(const CParseHandlerScalarBoolExpr &) = delete;
 
 	// ctor

@@ -215,8 +215,8 @@ CExpressionPreprocessor::PexprSimplifyQuantifiedSubqueries(CMemoryPool *mp,
 
 	COperator *pop = pexpr->Pop();
 
-	// TODO: - April 4th 2024, currently not handled for subquery with
-	// multiple columns
+	// TODO: - currently not handled for subquery with multiple columns
+	// Please refer to https://github.com/greenplum-db/gpdb/issues/17512
 	if (CUtils::FQuantifiedSubquery(pop) &&
 		!(CScalarSubqueryQuantified::PopConvert(pop)->FMultipleColumns()) &&
 		1 == (*pexpr)[0]->DeriveMaxCard().Ull())
@@ -2776,6 +2776,19 @@ CExpressionPreprocessor::ConvertInToSimpleExists(CMemoryPool *mp,
 					CScalarProjectElement *popScPrjElem =
 						CScalarProjectElement::PopConvert(pexprPrjE->Pop());
 					CColRef *pcrPrjElem = popScPrjElem->Pcr();
+					// we are here when subquery contains
+					// only outer references (example:
+					// SELECT bar.a, bar.b FROM foo). This
+					// means project list contains only
+					// outer references (no inner
+					// references/SRFs). So all colrefs are
+					// guaranteed to be present within the
+					// project list.  Therefore, if a
+					// column reference doesn't match an
+					// element in the prjElem in PrjList,
+					// we simply move on to validate the
+					// next prjElem in the list until we
+					// find it.
 					if (pcrPrjElem == (*colref_array)[ulCol])
 					{
 						// scalar ident

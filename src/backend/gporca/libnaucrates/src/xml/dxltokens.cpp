@@ -175,8 +175,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenScalar, GPOS_WSZ_LIT("Scalar")},
 		{EdxltokenScalarExpr, GPOS_WSZ_LIT("ScalarExpr")},
-		{EdxltokenSubqueryTestExprBoolOpType,
-		 GPOS_WSZ_LIT("SubqueryTestExprBoolOpType")},
 
 		{EdxltokenScalarProjList, GPOS_WSZ_LIT("ProjList")},
 		{EdxltokenScalarFilter, GPOS_WSZ_LIT("Filter")},
@@ -454,6 +452,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenOpType, GPOS_WSZ_LIT("OperatorType")},
 		{EdxltokenOpTypeAny, GPOS_WSZ_LIT("Any")},
 		{EdxltokenOpTypeAll, GPOS_WSZ_LIT("All")},
+		{EdxltokenBoolExprType,
+		 GPOS_WSZ_LIT("BoolExprType")},
 
 		{EdxltokenTypeName, GPOS_WSZ_LIT("TypeName")},
 		{EdxltokenUnknown, GPOS_WSZ_LIT("Unknown")},

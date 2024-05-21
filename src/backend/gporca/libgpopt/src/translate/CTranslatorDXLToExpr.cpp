@@ -2743,20 +2743,26 @@ CTranslatorDXLToExpr::PexprCollapseNot(const CDXLNode *pdxlnNotExpr)
 	if (EdxlopScalarSubqueryAny == edxlopid ||
 		EdxlopScalarSubqueryAll == edxlopid)
 	{
-		// NOT followed by IN (ANY) is translated as ALL<inverse_op>
+		// This section is reached only when dealing with a NOT IN
+		// (internally represents as NOT (= ANY)) scalar subquery and
+		// these queries are translated to ALL<inverse_op> subquery
+		// example:
+		// select * from foo where (a, b) NOT IN(select c, d from bar)
+		// translating to  select * from foo where (a, b) != ALL(select c, d from bar)
 		CDXLScalarSubqueryQuantified *pdxlopSubqueryQuantified =
 			CDXLScalarSubqueryQuantified::Cast(pdxlnNotChild->GetOperator());
 		Edxlopid edxlopidNew = (EdxlopScalarSubqueryAny == edxlopid)
 								   ? EdxlopScalarSubqueryAll
 								   : EdxlopScalarSubqueryAny;
 
-		// This section is reached only when dealing with a NOT IN
-		// scalar subquery.
 		CScalarBoolOp::EBoolOperator testexpr_booltype =
 			CScalarBoolOp::EboolopSentinel;
 		CWStringConst str_neq(GPOS_WSZ_LIT("<>"));
 		if (pdxlopSubqueryQuantified->FMultipleColumns())
 		{
+			// since we are translating ANY subquery to ALL, bool
+			// type should be set OR for multicolumn scalar
+			// subquery
 			testexpr_booltype = CScalarBoolOp::EboolopOr;
 		}
 

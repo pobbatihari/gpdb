@@ -1956,7 +1956,7 @@
                 </dxl:Array>
               </dxl:ArrayComp>
               <dxl:Not>
-                <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="29" SubqueryTestExprBoolOpType="3">
+                <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="29">
                   <dxl:Ident ColId="2" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>
                   <dxl:LogicalSelect>
                     <dxl:Comparison ComparisonOperator="~~" OperatorMdid="0.1209.1.0">

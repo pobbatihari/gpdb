@@ -2371,7 +2371,7 @@
           <dxl:IsNotNull>
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.25.1.0"/>
           </dxl:IsNotNull>
-          <dxl:SubqueryAll OperatorName="&lt;" OperatorMdids="0.97.1.0" ColIds="13" SubqueryTestExprBoolOpType="3">
+          <dxl:SubqueryAll OperatorName="&lt;" OperatorMdids="0.97.1.0" ColIds="13">
             <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
             <dxl:LogicalSelect>
               <dxl:SubqueryExists>

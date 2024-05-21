@@ -655,7 +655,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="10" SubqueryTestExprBoolOpType="3">
+        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="10">
           <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
           <dxl:Union InputColumns="10;20" CastAcrossInputs="false">
             <dxl:Columns>

@@ -17,6 +17,7 @@
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CNormalizer.h"
 #include "gpopt/operators/COperator.h"
+#include "gpopt/operators/CScalarSubqueryQuantified.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDScalarOp.h"
 
@@ -80,12 +81,17 @@ CXformSimplifySubquery::FSimplifyQuantified(CMemoryPool *mp,
 
 	CExpression *pexprNewSubquery = nullptr;
 	CExpression *pexprCmp = nullptr;
-	CXformUtils::QuantifiedToAgg(mp, pexprScalar, &pexprNewSubquery, &pexprCmp);
 
-	if (nullptr == pexprCmp && nullptr == pexprNewSubquery)
+	// TODO: - currently not handled for multi column scalar subquery
+	// Please refer to https://github.com/greenplum-db/gpdb/issues/17516
+	if (CScalarSubqueryQuantified::PopConvert(pexprScalar->Pop())
+			->FMultipleColumns())
 	{
 		return false;
 	}
+
+	CXformUtils::QuantifiedToAgg(mp, pexprScalar, &pexprNewSubquery, &pexprCmp);
+
 	// create a comparison predicate involving subquery expression
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 	(*pexprCmp)[1]->AddRef();

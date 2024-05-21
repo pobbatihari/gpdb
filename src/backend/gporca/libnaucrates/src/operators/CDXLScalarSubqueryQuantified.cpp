@@ -58,6 +58,29 @@ CDXLScalarSubqueryQuantified::~CDXLScalarSubqueryQuantified()
 	GPOS_DELETE(m_scalar_op_mdname);
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLScalarSubqueryQuantified::GetBoolOpTypeStr
+//
+//	@doc:
+//		return Bool Operator name
+//
+//---------------------------------------------------------------------------
+const CWStringConst *
+CDXLScalarSubqueryQuantified::GetBoolOpTypeStr() const
+{
+	switch (m_testexprBoolopType)
+	{
+		case Edxland:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenScalarBoolAnd);
+		case Edxlor:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenScalarBoolOr);
+		case Edxlnot:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenScalarBoolNot);
+		default:
+			return nullptr;
+	}
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -90,9 +113,12 @@ CDXLScalarSubqueryQuantified::SerializeToDXL(CXMLSerializer *xml_serializer,
 								 colids);
 	GPOS_DELETE(colids);
 
-	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenSubqueryTestExprBoolOpType),
-		GetBoolOpType());
+	if (FMultipleColumns())
+	{
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenBoolExprType),
+			GetBoolOpTypeStr());
+	}
 
 	dxlnode->SerializeChildrenToDXL(xml_serializer);
 	xml_serializer->CloseElement(

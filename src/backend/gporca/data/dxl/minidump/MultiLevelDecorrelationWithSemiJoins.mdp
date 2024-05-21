@@ -289,15 +289,15 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="9" SubqueryTestExprBoolOpType="3">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="9">
             <dxl:Ident ColId="1" ColName="c1" TypeMdid="0.23.1.0"/>
             <dxl:LogicalSelect>
               <dxl:Not>
-                <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="17" SubqueryTestExprBoolOpType="3">
+                <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="17">
                   <dxl:Ident ColId="9" ColName="c2" TypeMdid="0.23.1.0"/>
                   <dxl:LogicalSelect>
                     <dxl:Not>
-                      <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="25" SubqueryTestExprBoolOpType="3">
+                      <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="25">
                         <dxl:Ident ColId="17" ColName="c3" TypeMdid="0.23.1.0"/>
                         <dxl:LogicalSelect>
                           <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">

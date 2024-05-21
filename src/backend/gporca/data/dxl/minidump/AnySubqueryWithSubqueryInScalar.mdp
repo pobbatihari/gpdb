@@ -273,7 +273,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalSelect>
-        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.416.1.0" ColIds="17" SubqueryTestExprBoolOpType="3">
+        <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.416.1.0" ColIds="17">
           <dxl:ScalarSubquery ColId="26">
             <dxl:LogicalGroupBy>
               <dxl:GroupingColumns/>

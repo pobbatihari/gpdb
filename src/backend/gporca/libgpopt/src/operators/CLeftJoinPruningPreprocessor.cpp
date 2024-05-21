@@ -381,8 +381,8 @@ CLeftJoinPruningPreprocessor::PexprJoinPruningScalarSubquery(
 	{
 		CScalarSubqueryQuantified *subquery_pop =
 			CScalarSubqueryQuantified::PopConvert(pexprScalar->Pop());
-		// TODO: - April 4th 2024, currently not handled for
-		// multi-column scalar subquery
+		// TODO: - currently not handled for multi-column scalar subquery
+		// Please refer to https://github.com/greenplum-db/gpdb/issues/17515
 		if (subquery_pop->FMultipleColumns())
 		{
 			pexprScalar->AddRef();

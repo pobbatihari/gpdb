@@ -45,7 +45,7 @@ public:
 	};
 
 private:
-	// mdids of the scalar comparison operators
+	// mdids of OpExpr types
 	IMdIdArray *m_scalar_op_mdids;
 
 	// name of scalar comparison operator
@@ -104,6 +104,8 @@ public:
 
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *, const CDXLNode *) const override;
+
+	const CWStringConst *GetBoolOpTypeStr() const;
 
 	// conversion function
 	static CDXLScalarSubqueryQuantified *

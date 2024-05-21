@@ -622,7 +622,7 @@
       <dxl:CTEList/>
       <dxl:LogicalSelect>
         <dxl:Not>
-          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="10" SubqueryTestExprBoolOpType="3">
+          <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.96.1.0" ColIds="10">
             <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
             <dxl:LogicalSelect>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">

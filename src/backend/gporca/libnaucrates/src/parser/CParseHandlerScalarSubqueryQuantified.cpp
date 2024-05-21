@@ -16,6 +16,7 @@
 #include "naucrates/dxl/operators/CDXLScalarSubqueryAll.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerLogicalOp.h"
+#include "naucrates/dxl/parser/CParseHandlerScalarBoolExpr.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarValuesList.h"
 
 using namespace gpdxl;
@@ -93,19 +94,26 @@ CParseHandlerScalarSubqueryQuantified::StartElement(
 				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 				EdxltokenColIds, dxl_token);
 
-		INT TypeIndex = CDXLOperatorFactory::ExtractConvertAttrValueToInt(
-			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-			EdxltokenSubqueryTestExprBoolOpType, dxl_token);
+		const XMLCh *xmlstr = CDXLOperatorFactory::ExtractAttrValue(
+			attrs, EdxltokenBoolExprType, dxl_token, true);
+		INT BoolExprType = EdxlBoolExprTypeSentinel;
+		if (nullptr != xmlstr)
+		{
+			BoolExprType =
+				CParseHandlerScalarBoolExpr::GetDxlBoolTypeStr(xmlstr);
+		}
 
 		if (EdxltokenScalarSubqueryAny == dxl_token)
 		{
-			m_dxl_op = GPOS_NEW(m_mp) CDXLScalarSubqueryAny(
-				m_mp, mdids, md_op_name, colids, (EdxlBoolExprType) TypeIndex);
+			m_dxl_op = GPOS_NEW(m_mp)
+				CDXLScalarSubqueryAny(m_mp, mdids, md_op_name, colids,
+									  (EdxlBoolExprType) BoolExprType);
 		}
 		else
 		{
-			m_dxl_op = GPOS_NEW(m_mp) CDXLScalarSubqueryAll(
-				m_mp, mdids, md_op_name, colids, (EdxlBoolExprType) TypeIndex);
+			m_dxl_op = GPOS_NEW(m_mp)
+				CDXLScalarSubqueryAll(m_mp, mdids, md_op_name, colids,
+									  (EdxlBoolExprType) BoolExprType);
 		}
 	}
 	else if (0 == XMLString::compareString(

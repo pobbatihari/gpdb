@@ -781,13 +781,6 @@ CXformUtils::QuantifiedToAgg(
 	GPOS_ASSERT(nullptr != ppexprNewSubquery);
 	GPOS_ASSERT(nullptr != ppexprNewScalar);
 
-	// TODO: - April 4th 2024, currently not handled for multi column
-	// scalar subquery
-	if (CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop())
-			->FMultipleColumns())
-	{
-		return;
-	}
 	if (COperator::EopScalarSubqueryAll == pexprSubquery->Pop()->Eopid())
 	{
 		return SubqueryAllToAgg(mp, pexprSubquery, ppexprNewSubquery,
@@ -1273,6 +1266,14 @@ CXformUtils::PexprInversePred(CMemoryPool *mp, CExpression *pexprSubquery)
 			pscalarchilds->Append(scalarcmp);
 		}
 
+		// example: select * from foo where (a, b) != ALL (select a, b from bar);
+		// For `!= ALL`, the condition checks that no single tuple from the
+		// subquery result matches both elements of the tuple from `foo`,
+		// hence `AND` is used in the predicate.
+		// example: select * from foo where (a, b) = ALL (select a, b from bar);
+		// For `= ALL`, the condition checks that every tuple from the subquery
+		// result matches both elements of the tuple from `foo`, hence `OR`
+		// is used in the predicate.
 		const CWStringConst str_eq(GPOS_WSZ_LIT("="));
 		if (pstrop->Equals(&str_eq))
 		{

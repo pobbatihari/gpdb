@@ -76,8 +76,8 @@ CXformLeftAntiSemiJoinNotIn2HashJoinNotIn::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
-	// TODO: - April 4th 2024, currently not handled for multi-column
-	// scalar subquery
+	// TODO: - currently not handled for multi-column scalar subquery
+	// please refere to https://github.com/greenplum-db/gpdb/issues/17514
 	if (CUtils::FScalarBoolOp((*pexpr)[2]))
 	{
 		return;

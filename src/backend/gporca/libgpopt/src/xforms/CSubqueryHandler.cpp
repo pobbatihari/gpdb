@@ -1267,10 +1267,11 @@ CSubqueryHandler::FCreateCorrelatedApplyForQuantifiedSubquery(
 	CScalarSubqueryQuantified *popSubquery =
 		CScalarSubqueryQuantified::PopConvert(pexprSubquery->Pop());
 
-	// TODO: - April 4th 2024, We avoid creating correlated plans for scalar
+	// TODO: - We avoid creating correlated plans for scalar
 	// subqueries with multiple columns because we currently do not maintain
 	// the original column order specified in the query across optimization,
 	// which results in generating an incorrect subplans
+	// Please refer to https://github.com/greenplum-db/gpdb/issues/17513
 
 	if (popSubquery->FMultipleColumns())
 	{
@@ -1565,7 +1566,7 @@ CSubqueryHandler::FRemoveAnySubquery(CExpression *pexprOuter,
 			const IMDScalarOp *pmdOp =
 				md_accessor->RetrieveScOp((*(pScalarSubqAny->MdIdOps()))[0]);
 			// function attributes of the comparison operator itself
-			// TODO: Synthesize the function attibutes of general operators, like
+			// TODO: Synthesize the function attributes of general operators, like
 			//       CScalarSubqueryAny/All, CScalarCmp, CScalarOp by providing a
 			//       DeriveFunctionProperties() method in these classes.
 			//       Once we do that, we can remove the line below and related code.

@@ -79,14 +79,6 @@ const CHAR *rgszSubqueryFileNames[] = {
 	"../data/dxl/minidump/Subquery-ExistsAllAggregatesWithDisjuncts.mdp",
 	"../data/dxl/minidump/Subquery-AnyAllAggregates.mdp",
 	"../data/dxl/minidump/Join-With-Subq-Preds-2.mdp",
-	"../data/dxl/minidump/MultiColumn-AnySubq1.mdp",
-	"../data/dxl/minidump/MultiColumn-AnySubq2.mdp",
-	"../data/dxl/minidump/MultiColumn-AnySubq3.mdp",
-	"../data/dxl/minidump/MultiColumn-AnySubq4.mdp",
-	"../data/dxl/minidump/MultiColumn-AllSubq1.mdp",
-	"../data/dxl/minidump/MultiColumn-AllSubq2.mdp",
-	"../data/dxl/minidump/MultiColumn-NotInSubq1.mdp",
-	"../data/dxl/minidump/MultiColumn-NotInSubq2.mdp",
 };
 
 

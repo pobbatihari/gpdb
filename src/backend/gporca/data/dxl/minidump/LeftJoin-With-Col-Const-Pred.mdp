@@ -1861,7 +1861,7 @@
                 </dxl:Array>
               </dxl:ArrayComp>
               <dxl:Not>
-                <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.607.1.0" ColIds="54" SubqueryTestExprBoolOpType="3">
+                <dxl:SubqueryAny OperatorName="=" OperatorMdids="0.607.1.0" ColIds="54">
                   <dxl:Ident ColId="32" ColName="oid" TypeMdid="0.26.1.0"/>
                   <dxl:LogicalGet>
                     <dxl:TableDescriptor Mdid="6.5011.1.1" TableName="pg_partition_rule">
@@ -1990,7 +1990,7 @@
         </dxl:LogicalProject>
       </dxl:LogicalLimit>
     </dxl:Query>
-                                                                                                                                                        <dxl:Plan Id="0" SpaceSize="1028">
+    <dxl:Plan Id="0" SpaceSize="1028">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="69941.462832" Rows="896.720000" Width="238"/>
