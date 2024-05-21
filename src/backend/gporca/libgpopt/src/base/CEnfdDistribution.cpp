@@ -160,10 +160,12 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		// subplan has no motion and the shared scan executes on
 		// different slices, the shareinput_mutator_xslice_2()
 		// incorrectly sets the share type, motion ID, and slice ID in
-		// the subplan, leading to disrupted cross-slice interaction. A
-		// permanent fix requires changes at the execution level,
-		// meanwhile discarding such plans to prevent unexpected
-		// behavior.
+		// the subplan, leading to disrupted cross-slice interaction.
+		// A permanent fix likely requires modifications at the
+		// execution level, which might be complex. To prevent
+		// unexpected behavior in the meantime, discarding such plans.
+		// This allows the ORCA to choose an alternative plan or
+		// gracefully fallback to the planner.
 		CCTEMap *cteMap = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->GetCostModel();
 		GPOS_ASSERT(NULL != cteMap);
 		if (CUtils::FCorrelatedNLJoin(exprhdl.Pop()) && cteMap->Size() > 0)
