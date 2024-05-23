@@ -166,6 +166,16 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		// unexpected behavior in the meantime, discarding such plans.
 		// This allows the ORCA to choose an alternative plan or
 		// gracefully fallback to the planner.
+		// sample prohibited plan snippet:
+		// 	       Sequence
+		//   		->  Shared Scan (share slice:id 0:0)
+		//     			->  Seq Scan on t1 t1_1
+		//   		->  Gather Motion 3:1  (slice3; segments: 3)
+		//     			->  Redistribute Motion 1:3  (slice1)
+		//       			->  Function Scan on generate_series
+		//         				SubPlan 1  (slice1)
+		//           				->  Shared Scan (share slice:id 1:0)
+
 		CCTEMap *cteMap = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->GetCostModel();
 		GPOS_ASSERT(NULL != cteMap);
 		if (CUtils::FCorrelatedNLJoin(exprhdl.Pop()) && cteMap->Size() > 0)
