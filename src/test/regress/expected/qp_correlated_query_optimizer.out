@@ -2192,7 +2192,7 @@ select A.i, B.i,C.i from A, B, C where (A.i,B.i) in (select A.i, B.i from A,B wh
 
 select * from A,B,C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < C.i and B.i = C.i and C.i not in (select A.i from A where A.j = 1 and A.j = B.j)) order by 1,2,3,4,5,6;
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  i  | j | i  | j | i  | j  
 ----+---+----+---+----+----
   1 | 1 |  2 | 7 |  2 |  7

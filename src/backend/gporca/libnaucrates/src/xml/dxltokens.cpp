@@ -452,8 +452,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenOpType, GPOS_WSZ_LIT("OperatorType")},
 		{EdxltokenOpTypeAny, GPOS_WSZ_LIT("Any")},
 		{EdxltokenOpTypeAll, GPOS_WSZ_LIT("All")},
-		{EdxltokenBoolExprType,
-		 GPOS_WSZ_LIT("BoolExprType")},
+		{EdxltokenBoolExprType, GPOS_WSZ_LIT("BoolExprType")},
 
 		{EdxltokenTypeName, GPOS_WSZ_LIT("TypeName")},
 		{EdxltokenUnknown, GPOS_WSZ_LIT("Unknown")},

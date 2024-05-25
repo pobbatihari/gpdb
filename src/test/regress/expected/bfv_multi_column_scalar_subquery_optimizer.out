@@ -75,7 +75,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t2_subq
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t1_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                  QUERY PLAN                 
 --------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -90,7 +90,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a, t1_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  1 | 1 |  
@@ -222,7 +222,7 @@ select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select t2_subq.a
 
 explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t3_subq.a from t3_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                     QUERY PLAN                    
 --------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -240,7 +240,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) IN (select t2_subq.a, t3_subq.a from t3_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c | a | b | c 
 ---+---+---+---+---+---
  1 | 1 |   | 1 | 1 | 0
@@ -627,7 +627,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t2_subq
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -644,7 +644,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) IN (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  1 | 1 | 1
@@ -814,7 +814,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.c+1, t2_su
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -833,7 +833,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
 (0 rows)
@@ -972,7 +972,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a+t2_subq.
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -991,7 +991,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  2 | 1 | 1
@@ -1147,7 +1147,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -1170,7 +1170,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) IN (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  1 | 1 |  
@@ -2546,7 +2546,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a, t2_
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2561,7 +2561,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a, t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  1 | 1 |  
@@ -2718,7 +2718,7 @@ select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select t2_su
 
 explain (costs off) select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t3_subq.a from t3_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -2741,7 +2741,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq, t2_subq where (t1_subq.a, t2_subq.a) != ANY (select t2_subq.a, t3_subq.a from t3_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c |  a  |  b  | c 
 ---+---+---+-----+-----+---
  1 | 1 | 1 |   0 |   0 | 0
@@ -3159,7 +3159,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t2_
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -3174,7 +3174,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b, t1_subq.c) != ANY (select t1_subq.b, t1_subq.c, t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  1 |   | 1
@@ -3328,7 +3328,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.c+1, t
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -3343,7 +3343,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+1, t2_subq.b+1 from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  2 | 1 | 1
@@ -3499,7 +3499,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a+t2_s
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -3514,7 +3514,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t1_subq.a+t2_subq.a, t1_subq.b+t2_subq.b from t2_subq);
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  1 | 1 |  
@@ -3680,7 +3680,7 @@ select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_s
 
 explain (costs off) select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
                                  QUERY PLAN                                  
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -3703,7 +3703,7 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 
 select * from t1_subq where (t1_subq.a, t1_subq.b) != ANY (select t2_subq.a,t2_subq.b from t2_subq where (t2_subq.a, t2_subq.b) IN (select t3_subq.a, t1_subq.b from t3_subq));
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Unexpected subplan test expression
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: subplans with multi-column subqueries
  a | b | c 
 ---+---+---
  2 | 1 | 1

@@ -1000,7 +1000,7 @@ CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar(
 	{
 		// test expression is expected to be a comparison
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("Unexpected subplan test expression"));
+				   GPOS_WSZ_LIT("subplans with multi-column subqueries"));
 	}
 
 	GPOS_ASSERT(2 == test_expr_node->Arity());
