@@ -2943,9 +2943,11 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 				CColRefSet *pcrsRelationalChild =
 					(*pexprLogicalChild)[0]->DeriveOutputColumns();
 
-				// bail out if the project list contains inner reference
+				// bail out if the project list contains inner reference because
+				// converting subqueries with inner references can lead to
+				// incorrect results when table has null tuples.
 				// Example Query:
-				//    select * from foo where (a, b) = ANY(select foo.b, a from bar)
+				//    select ((a, b) = any (select c, d from bar)) from foo;
 				for (ULONG ulCol = 0; ulCol < pcrsSubquery->Size(); ulCol++)
 				{
 					if (pcrsRelationalChild->FMember((*pcrsSubquery)[ulCol]))
